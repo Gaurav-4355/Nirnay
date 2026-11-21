@@ -1,0 +1,177 @@
+{
+  "summary": {
+    "overall_recall": 95.8,
+    "evidence_validity": 100.0,
+    "no_guess_rate": 100.0,
+    "decisions": {
+      "expected": 4,
+      "found": 4,
+      "correct": 4,
+      "precision": 100.0,
+      "recall": 100.0
+    },
+    "tasks": {
+      "expected": 16,
+      "found": 16,
+      "correct": 15,
+      "precision": 93.8,
+      "recall": 93.8
+    },
+    "task_updates": {
+      "expected": 3,
+      "found": 3,
+      "correct": 3,
+      "precision": 100.0,
+      "recall": 100.0
+    },
+    "conflicts": {
+      "expected": 4,
+      "found": 4,
+      "correct": 4,
+      "precision": 100.0,
+      "recall": 100.0
+    }
+  },
+  "meetings": [
+    {
+      "meeting_id": 1,
+      "title": "Meeting 1: Launch Timeline & Core Milestones",
+      "meeting_date": "2026-12-01",
+      "decisions": {
+        "expected": 2,
+        "found": 2,
+        "correct": 2,
+        "precision": 1.0,
+        "recall": 1.0,
+        "missed": [],
+        "extra": []
+      },
+      "tasks": {
+        "expected": 5,
+        "found": 5,
+        "correct": 5,
+        "precision": 1.0,
+        "recall": 1.0,
+        "missed": [],
+        "extra": []
+      },
+      "task_updates": {
+        "expected": 0,
+        "found": 0,
+        "correct": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "missed": [],
+        "extra": []
+      },
+      "conflicts": {
+        "expected": 0,
+        "found": 0,
+        "correct": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "missed": [],
+        "extra": []
+      },
+      "clarification_score": 100.0
+    },
+    {
+      "meeting_id": 2,
+      "title": "Meeting 2: Progress Sync & Pricing Revision",
+      "meeting_date": "2026-12-10",
+      "decisions": {
+        "expected": 1,
+        "found": 1,
+        "correct": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "missed": [],
+        "extra": []
+      },
+      "tasks": {
+        "expected": 4,
+        "found": 4,
+        "correct": 4,
+        "precision": 1.0,
+        "recall": 1.0,
+        "missed": [],
+        "extra": []
+      },
+      "task_updates": {
+        "expected": 2,
+        "found": 2,
+        "correct": 2,
+        "precision": 1.0,
+        "recall": 1.0,
+        "missed": [],
+        "extra": []
+      },
+      "conflicts": {
+        "expected": 1,
+        "found": 1,
+        "correct": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "missed": [],
+        "extra": []
+      },
+      "clarification_score": 100.0
+    },
+    {
+      "meeting_id": 3,
+      "title": "Meeting 3: Scope Review & Launch Postponement",
+      "meeting_date": "2026-12-18",
+      "decisions": {
+        "expected": 1,
+        "found": 1,
+        "correct": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "missed": [],
+        "extra": []
+      },
+      "tasks": {
+        "expected": 7,
+        "found": 7,
+        "correct": 6,
+        "precision": 0.857,
+        "recall": 0.857,
+        "missed": [
+          {
+            "title": "In-app iconography refresh for dark mode",
+            "owner": "Priya",
+            "deadline": "2026-12-25"
+          }
+        ],
+        "extra": [
+          {
+            "title": "Refresh all in-app dark mode SVG icons",
+            "owner": "Priya",
+            "deadline": "2026-12-25"
+          }
+        ]
+      },
+      "task_updates": {
+        "expected": 1,
+        "found": 1,
+        "correct": 1,
+        "precision": 1.0,
+        "recall": 1.0,
+        "missed": [],
+        "extra": []
+      },
+      "conflicts": {
+        "expected": 3,
+        "found": 3,
+        "correct": 3,
+        "precision": 1.0,
+        "recall": 1.0,
+        "missed": [],
+        "extra": []
+      },
+      "clarification_score": 100.0
+    }
+  ],
+  "evaluated_at": "2026-11-21T18:00:00.000Z",
+  "snapshot": true
+}

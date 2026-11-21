@@ -265,3 +265,21 @@ class MeetingListItem(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AskRequest(BaseModel):
+    question: str
+    history: Optional[List[Dict[str, str]]] = None
+
+
+class AskCitation(BaseModel):
+    meeting_id: int
+    quote: str
+    speaker: Optional[str] = None
+
+
+class AskResponse(BaseModel):
+    answerable: bool
+    answer: str
+    citations: List[AskCitation] = []
+

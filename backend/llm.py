@@ -121,14 +121,19 @@ def call_groq_json(
     user_prompt: str,
     transcript: str = "",
     open_tasks: Optional[List[Dict[str, Any]]] = None,
+    ignore_demo_fallback: bool = False,
 ) -> Tuple[Dict[str, Any], bool]:
     """
     Calls Groq API with MODEL_NAME, temperature 0, JSON object response format.
     Handles rate-limit errors (429) with a short wait and one retry.
+    Supports optional GROQ_REASONING_EFFORT ('low' | 'medium' | 'high').
     Returns: (parsed_json_dict, cached_demo_bool)
     """
     api_key = get_groq_api_key()
-    demo_fallback_enabled = os.getenv("DEMO_FALLBACK", "").strip().lower() == "true"
+    demo_fallback_enabled = (
+        not ignore_demo_fallback
+        and os.getenv("DEMO_FALLBACK", "").strip().lower() == "true"
+    )
 
     if not api_key:
         if demo_fallback_enabled:
@@ -145,15 +150,32 @@ def call_groq_json(
         {"role": "user", "content": user_prompt},
     ]
 
+    reasoning_env = os.getenv("GROQ_REASONING_EFFORT", "").strip().lower()
+    reasoning_effort = reasoning_env if reasoning_env in ("low", "medium", "high") else None
+
     last_error = None
     for attempt in range(2):
         try:
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                temperature=0,
-                response_format={"type": "json_object"},
-                messages=messages,
-            )
+            kwargs: Dict[str, Any] = {
+                "model": MODEL_NAME,
+                "temperature": 0,
+                "response_format": {"type": "json_object"},
+                "messages": messages,
+            }
+            if reasoning_effort:
+                kwargs["reasoning_effort"] = reasoning_effort
+
+            try:
+                response = client.chat.completions.create(**kwargs)
+            except Exception as param_err:
+                # If rejected due to reasoning_effort parameter, retry once without it
+                if reasoning_effort and "reasoning_effort" in str(param_err).lower():
+                    reasoning_effort = None
+                    kwargs.pop("reasoning_effort", None)
+                    response = client.chat.completions.create(**kwargs)
+                else:
+                    raise param_err
+
             raw_content = response.choices[0].message.content
             return json.loads(raw_content), False
         except RateLimitError as e:

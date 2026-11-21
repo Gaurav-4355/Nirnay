@@ -13,16 +13,22 @@ import {
   GitBranch,
   RefreshCw,
   ExternalLink,
+  Kanban,
+  Table as TableIcon,
+  Layers,
 } from 'lucide-react';
 
-export default function TasksView() {
+export default function TasksView({ showToast }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [ownerFilter, setOwnerFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingTaskId, setUpdatingTaskId] = useState(null);
+  const [viewMode, setViewMode] = useState('board'); // 'board' | 'table'
   const [integrations, setIntegrations] = useState({ trello: false, webhook: false });
+  const [todayStr, setTodayStr] = useState('');
+  const [dragOverCol, setDragOverCol] = useState(null);
 
   const fetchTasks = (owner = '') => {
     setLoading(true);
@@ -30,7 +36,7 @@ export default function TasksView() {
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
-        setTasks(data);
+        setTasks(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch((err) => {
@@ -45,6 +51,10 @@ export default function TasksView() {
       .then((res) => res.json())
       .then((data) => setIntegrations(data))
       .catch(() => {});
+    fetch('/api/settings/today')
+      .then((res) => res.json())
+      .then((data) => setTodayStr(data.today || ''))
+      .catch(() => {});
   }, [ownerFilter]);
 
   const allOwners = Array.from(
@@ -56,7 +66,15 @@ export default function TasksView() {
   ).sort();
 
   const handleStatusChange = async (taskId, newStatus) => {
+    const originalTask = tasks.find((t) => t.id === taskId);
+    if (!originalTask || originalTask.status === newStatus) return;
+
+    // Optimistic UI update
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
+    );
     setUpdatingTaskId(taskId);
+
     try {
       const res = await fetch(`/api/tasks/${taskId}`, {
         method: 'PATCH',
@@ -68,12 +86,104 @@ export default function TasksView() {
         setTasks((prev) =>
           prev.map((t) => (t.id === taskId ? { ...t, status: updated.status } : t))
         );
+        if (showToast) {
+          showToast(`Task moved to ${newStatus}. Outbox tracker updated.`, 'success');
+        }
+      } else {
+        // Rollback
+        setTasks((prev) =>
+          prev.map((t) => (t.id === taskId ? originalTask : t))
+        );
+        if (showToast) showToast('Failed to update task status. Rolled back.', 'error');
       }
     } catch (err) {
-      console.error('Error updating task status:', err);
+      // Rollback
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? originalTask : t))
+      );
+      if (showToast) showToast('Network error updating task.', 'error');
     } finally {
       setUpdatingTaskId(null);
     }
+  };
+
+  // HTML5 Drag and Drop handlers
+  const handleDragStart = (e, taskId) => {
+    e.dataTransfer.setData('text/plain', taskId.toString());
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, colStatus) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverCol !== colStatus) {
+      setDragOverCol(colStatus);
+    }
+  };
+
+  const handleDragLeave = (e, colStatus) => {
+    if (dragOverCol === colStatus) {
+      setDragOverCol(null);
+    }
+  };
+
+  const handleDrop = (e, colStatus) => {
+    e.preventDefault();
+    setDragOverCol(null);
+    const taskIdStr = e.dataTransfer.getData('text/plain');
+    const taskId = parseInt(taskIdStr, 10);
+    if (!isNaN(taskId)) {
+      handleStatusChange(taskId, colStatus);
+    }
+  };
+
+  const getOwnerColor = (name) => {
+    if (!name) return 'bg-slate-800 text-slate-300 border-slate-700';
+    const colorPairs = [
+      'bg-indigo-950 text-indigo-300 border-indigo-700',
+      'bg-purple-950 text-purple-300 border-purple-700',
+      'bg-emerald-950 text-emerald-300 border-emerald-700',
+      'bg-amber-950 text-amber-300 border-amber-700',
+      'bg-rose-950 text-rose-300 border-rose-700',
+      'bg-cyan-950 text-cyan-300 border-cyan-700',
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return colorPairs[Math.abs(hash) % colorPairs.length];
+  };
+
+  const getDeadlineBadge = (deadline, status) => {
+    if (!deadline) return <span className="text-slate-500 italic text-[11px]">No deadline</span>;
+    if (status === 'done') return <span className="text-slate-400 font-mono text-[11px]">{deadline}</span>;
+
+    let diff = null;
+    if (todayStr) {
+      const todayDate = new Date(todayStr);
+      const taskDate = new Date(deadline);
+      diff = Math.round((taskDate - todayDate) / (1000 * 60 * 60 * 24));
+    }
+
+    if (diff !== null && diff < 0) {
+      return (
+        <span className="px-2 py-0.5 rounded-md font-mono text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">
+          Overdue ({Math.abs(diff)}d ago)
+        </span>
+      );
+    }
+    if (diff !== null && diff <= 2) {
+      return (
+        <span className="px-2 py-0.5 rounded-md font-mono text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800">
+          Due in {diff === 0 ? 'today' : `${diff}d`}
+        </span>
+      );
+    }
+
+    return (
+      <span className="text-slate-300 font-mono text-[11px] flex items-center gap-1">
+        <Calendar className="w-3 h-3 text-slate-500" />
+        {deadline}
+      </span>
+    );
   };
 
   const filteredTasks = tasks.filter((t) => {
@@ -94,6 +204,12 @@ export default function TasksView() {
   const doneCount = tasks.filter((t) => t.status === 'done').length;
   const blockedCount = tasks.filter((t) => t.status === 'blocked').length;
 
+  const kanbanColumns = [
+    { id: 'pending', title: 'Pending', count: pendingCount, border: 'border-indigo-500/40', bg: 'bg-indigo-950/20' },
+    { id: 'blocked', title: 'Blocked', count: blockedCount, border: 'border-rose-500/40', bg: 'bg-rose-950/20' },
+    { id: 'done', title: 'Done', count: doneCount, border: 'border-emerald-500/40', bg: 'bg-emerald-950/20' },
+  ];
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -103,114 +219,222 @@ export default function TasksView() {
             <CheckSquare className="w-6 h-6 text-emerald-400" />
             Execution Tasks Board
           </h2>
-          <p className="text-sm text-slate-400">
-            Track commitments, dependencies, and execution status across all meetings.
+          <p className="text-sm text-slate-400 mt-1">
+            Track commitments, drag cards across status columns, and keep Trello trackers in sync.
           </p>
         </div>
 
-        {/* Stats Badges */}
-        <div className="flex items-center gap-2 flex-wrap text-xs">
+        {/* View Toggle & Status */}
+        <div className="flex items-center gap-3 flex-wrap">
           {!integrations.trello && (
             <span className="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 font-mono text-[11px]">
               Internal tracker mode (Trello not configured)
             </span>
           )}
-          <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 font-medium">
-            Total: <span className="font-bold text-white">{totalCount}</span>
-          </div>
-          <div className="px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 font-medium flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
-            Pending: <span className="font-bold text-white">{pendingCount}</span>
-          </div>
-          <div className="px-3 py-1.5 rounded-xl bg-emerald-950/50 border border-emerald-800/60 text-emerald-300 font-medium flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            Done: <span className="font-bold">{doneCount}</span>
-          </div>
-          <div className="px-3 py-1.5 rounded-xl bg-rose-950/50 border border-rose-800/60 text-rose-300 font-medium flex items-center gap-1.5">
-            <Ban className="w-3.5 h-3.5" />
-            Blocked: <span className="font-bold">{blockedCount}</span>
+
+          {/* Table | Board Toggle */}
+          <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800">
+            <button
+              onClick={() => setViewMode('board')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === 'board'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Kanban className="w-3.5 h-3.5" />
+              <span>Board</span>
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === 'table'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <TableIcon className="w-3.5 h-3.5" />
+              <span>Table</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 bg-slate-900 border border-slate-800 p-3.5 rounded-2xl">
-        <div className="relative flex-1 w-full">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            placeholder="Search tasks, owners, dependencies, meetings..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <User className="w-3.5 h-3.5 text-slate-400" />
-          <select
-            value={ownerFilter}
-            onChange={(e) => setOwnerFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-          >
-            <option value="">All Owners</option>
-            {allOwners.map((owner) => (
-              <option key={owner} value={owner}>
-                {owner}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Filter className="w-3.5 h-3.5 text-slate-400" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-          >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="done">Done</option>
-            <option value="blocked">Blocked</option>
-          </select>
-        </div>
+      {/* Owner Filter Chips Row */}
+      <div className="flex items-center gap-2 flex-wrap pb-1 text-xs">
+        <span className="text-slate-500 font-medium shrink-0 flex items-center gap-1">
+          <Filter className="w-3.5 h-3.5" />
+          Filter Owner:
+        </span>
+        <button
+          onClick={() => setOwnerFilter('')}
+          className={`px-3 py-1 rounded-xl font-semibold transition-all ${
+            !ownerFilter
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950'
+              : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
+          }`}
+        >
+          All ({totalCount})
+        </button>
+        {allOwners.map((owner) => {
+          const count = tasks.filter((t) => t.owner === owner).length;
+          return (
+            <button
+              key={owner}
+              onClick={() => setOwnerFilter(ownerFilter === owner ? '' : owner)}
+              className={`px-3 py-1 rounded-xl font-semibold transition-all ${
+                ownerFilter === owner
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950'
+                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
+              }`}
+            >
+              @{owner} ({count})
+            </button>
+          );
+        })}
       </div>
 
-      {/* Task Cards */}
+      {/* Main Board vs Table Area */}
       {loading ? (
-        <div className="text-center py-16 text-slate-500 text-sm italic">
-          Loading tasks...
+        <div className="py-20 text-center">
+          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-3 text-xs text-slate-400">Loading execution tasks...</p>
         </div>
-      ) : filteredTasks.length === 0 ? (
-        <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800 p-8 space-y-3">
-          <CheckSquare className="w-8 h-8 text-slate-600 mx-auto" />
-          <h3 className="text-base font-semibold text-slate-300">No tasks found</h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
-            {tasks.length === 0
-              ? 'Analyze a meeting transcript in the "New Meeting" view to extract and save action items.'
-              : 'Try adjusting your search or filters to see more tasks.'}
-          </p>
+      ) : tasks.length === 0 ? (
+        <div className="p-12 text-center rounded-2xl bg-slate-900/40 border border-slate-800">
+          <CheckSquare className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+          <h4 className="text-sm font-semibold text-white">No tasks found</h4>
+          <p className="text-xs text-slate-400 mt-1">Analyze a meeting to extract actionable tasks.</p>
+        </div>
+      ) : viewMode === 'board' ? (
+        /* KANBAN BOARD VIEW */
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          {kanbanColumns.map((col) => {
+            const colTasks = filteredTasks.filter((t) => t.status === col.id);
+            const isHovered = dragOverCol === col.id;
+
+            return (
+              <div
+                key={col.id}
+                onDragOver={(e) => handleDragOver(e, col.id)}
+                onDragLeave={(e) => handleDragLeave(e, col.id)}
+                onDrop={(e) => handleDrop(e, col.id)}
+                className={`p-4 rounded-3xl bg-slate-900/50 border transition-all min-h-[500px] flex flex-col space-y-3 ${
+                  isHovered ? 'border-indigo-400 ring-2 ring-indigo-500/30 bg-slate-900/90' : col.border
+                }`}
+              >
+                {/* Column Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-2.5 h-2.5 rounded-full ${
+                        col.id === 'done'
+                          ? 'bg-emerald-400'
+                          : col.id === 'blocked'
+                          ? 'bg-rose-400'
+                          : 'bg-indigo-400'
+                      }`}
+                    />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                      {col.title}
+                    </h3>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-800 text-slate-300 font-bold border border-slate-700">
+                    {colTasks.length}
+                  </span>
+                </div>
+
+                {/* Cards List */}
+                <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+                  {colTasks.length === 0 ? (
+                    <div className="py-12 text-center text-[11px] text-slate-600 border border-dashed border-slate-800/80 rounded-2xl">
+                      Drop tasks here
+                    </div>
+                  ) : (
+                    colTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, task.id)}
+                        className="p-4 rounded-2xl bg-slate-950/80 hover:bg-slate-900 border border-slate-800/80 hover:border-slate-700 transition-all space-y-3 cursor-grab active:cursor-grabbing shadow-sm"
+                      >
+                        {/* Title */}
+                        <div className="text-xs font-semibold text-white leading-snug">
+                          {task.title}
+                        </div>
+
+                        {/* Owner Badge & Deadlines */}
+                        <div className="flex items-center justify-between gap-2 text-xs pt-1 border-t border-slate-800/60 flex-wrap">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`w-6 h-6 rounded-lg text-[10px] font-bold border flex items-center justify-center ${getOwnerColor(
+                                task.owner
+                              )}`}
+                            >
+                              {(task.owner || 'U').slice(0, 2).toUpperCase()}
+                            </span>
+                            <span className="text-[11px] font-medium text-slate-300">
+                              @{task.owner || 'Unassigned'}
+                            </span>
+                          </div>
+
+                          <div>{getDeadlineBadge(task.deadline, task.status)}</div>
+                        </div>
+
+                        {/* Dependency Badge */}
+                        {task.depends_on_title && (
+                          <div className="text-[10px] px-2 py-1 rounded-lg bg-cyan-950/40 text-cyan-300 border border-cyan-800/60 flex items-center gap-1 truncate">
+                            <GitBranch className="w-3 h-3 text-cyan-400 shrink-0" />
+                            <span className="truncate">Waits for: {task.depends_on_title}</span>
+                          </div>
+                        )}
+
+                        {/* Trello Link & Needs Clarification */}
+                        <div className="flex items-center justify-between text-[10px] pt-1 text-slate-500">
+                          {task.needs_clarification ? (
+                            <span className="text-amber-400 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              Clarification
+                            </span>
+                          ) : (
+                            <span className="font-mono text-[10px] text-slate-600">
+                              {task.meeting_title ? task.meeting_title.slice(0, 18) + '...' : ''}
+                            </span>
+                          )}
+
+                          {task.trello_url && (
+                            <a
+                              href={task.trello_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-indigo-400 hover:text-indigo-300 flex items-center gap-0.5"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span>Trello</span>
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3.5">
+        /* TABLE VIEW */
+        <div className="space-y-3">
           {filteredTasks.map((task) => (
             <div
               key={task.id}
-              className={`p-4 bg-slate-900 border rounded-2xl space-y-3 shadow-md hover:border-slate-700 transition-all ${
-                task.status === 'blocked'
-                  ? 'border-rose-900/60 bg-rose-950/10'
-                  : task.status === 'done'
-                  ? 'border-emerald-900/50 bg-emerald-950/10'
-                  : 'border-slate-800'
-              }`}
+              className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-all space-y-3"
             >
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div className="space-y-1.5 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="text-sm font-semibold text-white tracking-tight">
-                      {task.title}
-                    </h4>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-semibold text-white tracking-tight">{task.title}</h4>
                     {task.needs_clarification && (
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-700 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3 text-amber-400" />
@@ -218,45 +442,28 @@ export default function TasksView() {
                       </span>
                     )}
                   </div>
-
-                  <p className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
-                    <span className="text-indigo-400 font-medium">
-                      Created in: {task.meeting_title}
-                    </span>
-                    <span className="text-slate-600">•</span>
+                  <div className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
+                    <span className="text-indigo-400">Meeting: {task.meeting_title}</span>
+                    <span>•</span>
                     <span>Date: {task.meeting_date}</span>
-
-                    {/* Updated in Meeting Tag */}
-                    {task.updated_in_meeting_title && (
+                    {task.depends_on_title && (
                       <>
-                        <span className="text-slate-600">•</span>
-                        <span className="px-2 py-0.5 rounded-md bg-blue-950/70 text-blue-300 border border-blue-800/80 font-medium flex items-center gap-1">
-                          <RefreshCw className="w-3 h-3 text-blue-400" />
-                          Updated in: {task.updated_in_meeting_title}
+                        <span>•</span>
+                        <span className="text-cyan-400 flex items-center gap-1">
+                          <GitBranch className="w-3 h-3" />
+                          Waits for: {task.depends_on_title}
                         </span>
                       </>
                     )}
-                  </p>
-
-                  {/* Waits for Dependency Badge */}
-                  {task.depends_on_title && (
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-950/50 text-cyan-300 border border-cyan-800/60 text-xs font-medium">
-                      <GitBranch className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Waits for: <strong>{task.depends_on_title}</strong></span>
-                    </div>
-                  )}
+                  </div>
                 </div>
 
-                {/* Status Dropdown */}
-                <div className="shrink-0 flex items-center gap-2">
-                  <span className="text-[10px] font-semibold uppercase text-slate-500">
-                    Status:
-                  </span>
+                <div className="shrink-0 flex items-center gap-3">
                   <select
                     value={task.status}
                     disabled={updatingTaskId === task.id}
                     onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl border focus:outline-none cursor-pointer transition-colors ${
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl border focus:outline-none cursor-pointer ${
                       task.status === 'done'
                         ? 'bg-emerald-950/90 text-emerald-300 border-emerald-700'
                         : task.status === 'blocked'
@@ -264,78 +471,35 @@ export default function TasksView() {
                         : 'bg-slate-800 text-slate-300 border-slate-700'
                     }`}
                   >
-                    <option value="pending" className="bg-slate-900 text-slate-300">
-                      Pending
-                    </option>
-                    <option value="done" className="bg-slate-900 text-emerald-300">
-                      Done
-                    </option>
-                    <option value="blocked" className="bg-slate-900 text-rose-300">
-                      Blocked
-                    </option>
+                    <option value="pending" className="bg-slate-900 text-slate-300">Pending</option>
+                    <option value="done" className="bg-slate-900 text-emerald-300">Done</option>
+                    <option value="blocked" className="bg-slate-900 text-rose-300">Blocked</option>
                   </select>
                 </div>
               </div>
 
-              {/* Task Attributes Row */}
-              <div className="flex items-center gap-4 text-xs flex-wrap pt-1 border-t border-slate-800/80">
+              <div className="flex items-center gap-4 text-xs flex-wrap pt-2 border-t border-slate-800/80">
                 <div className="flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-indigo-400" />
                   <span className="text-slate-500">Owner:</span>
-                  <span
-                    className={`font-semibold px-2 py-0.5 rounded-md ${
-                      task.owner
-                        ? 'bg-slate-800 text-slate-200 border border-slate-700'
-                        : 'bg-amber-950 text-amber-300 border border-amber-800 italic'
-                    }`}
-                  >
-                    {task.owner || 'Unassigned'}
+                  <span className={`font-semibold px-2 py-0.5 rounded-md ${getOwnerColor(task.owner)}`}>
+                    @{task.owner || 'Unassigned'}
                   </span>
                 </div>
-
                 <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-indigo-400" />
                   <span className="text-slate-500">Deadline:</span>
-                  <span
-                    className={`font-mono ${
-                      task.deadline ? 'text-slate-200' : 'text-slate-500 italic'
-                    }`}
-                  >
-                    {task.deadline || 'No deadline'}
-                  </span>
+                  {getDeadlineBadge(task.deadline, task.status)}
                 </div>
-
                 {task.trello_url && (
                   <a
                     href={task.trello_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-950/40 hover:bg-indigo-950/80 border border-indigo-800/60 px-2 py-0.5 rounded-md transition-colors"
+                    className="flex items-center gap-1 text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-950/40 border border-indigo-800/60 px-2 py-0.5 rounded-md"
                   >
                     <span>Open in Trello</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
-
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 ml-auto">
-                  <span className="font-mono">
-                    {Math.round(task.confidence * 100)}% conf
-                  </span>
-                </div>
-              </div>
-
-              {/* Status Evidence Quote (if task was updated in later meeting) */}
-              {task.status_evidence && (
-                <div className="p-2.5 rounded-xl bg-blue-950/20 border border-blue-900/40 text-xs italic text-blue-200/90 font-serif flex items-start gap-2">
-                  <Quote className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
-                  <span>Update Evidence: "{task.status_evidence}"</span>
-                </div>
-              )}
-
-              {/* Original Evidence Quote */}
-              <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs italic text-slate-400 font-serif flex items-start gap-2">
-                <Quote className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />
-                <span>Original Evidence: "{task.evidence_quote}"</span>
               </div>
             </div>
           ))}

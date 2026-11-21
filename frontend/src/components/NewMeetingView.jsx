@@ -36,12 +36,23 @@ export default function NewMeetingView({ onMeetingSaved }) {
   // Proposal state
   const [proposal, setProposal] = useState(null);
   const [activeQuote, setActiveQuote] = useState(null);
+  const [analyzeTime, setAnalyzeTime] = useState(null);
+  const [modelName, setModelName] = useState('Groq');
 
   // Conflict resolutions state: mapped by conflict index: "kept_new" | "kept_old" | "acknowledged"
   const [conflictChoices, setConflictChoices] = useState({});
 
   // Task updates toggles: mapped by task_id -> boolean
   const [taskUpdatesIncluded, setTaskUpdatesIncluded] = useState({});
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.model) setModelName(data.model);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch('/api/seed/demo-meetings')
@@ -91,6 +102,8 @@ export default function NewMeetingView({ onMeetingSaved }) {
     setProposal(null);
     setActiveQuote(null);
     setConflictChoices({});
+    setAnalyzeTime(null);
+    const startTime = performance.now();
 
     try {
       const res = await fetch('/api/meetings/analyze', {
@@ -108,6 +121,8 @@ export default function NewMeetingView({ onMeetingSaved }) {
         throw new Error(errData.detail || 'Failed to analyze transcript');
       }
 
+      const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+      setAnalyzeTime(elapsed);
       const data = await res.json();
       setProposal(data);
 
@@ -435,13 +450,19 @@ export default function NewMeetingView({ onMeetingSaved }) {
           {/* Proposal Header Banner */}
           <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40">
                   Step 2: Human Review & Confirmation
                 </span>
                 <span className="text-xs text-slate-400 font-mono">
                   {proposal.meeting_date}
                 </span>
+                {analyzeTime && (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-indigo-900/60 text-indigo-300 border border-indigo-700/60 flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-indigo-400" />
+                    <span>Analyzed in {analyzeTime}s with {modelName}</span>
+                  </span>
+                )}
               </div>
               <h3 className="text-lg font-bold text-white mt-1">
                 Proposal for: {proposal.title}

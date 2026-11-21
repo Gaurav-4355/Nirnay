@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  LayoutDashboard,
   PlusCircle,
   Compass,
   CheckSquare,
@@ -9,9 +10,18 @@ import {
   Send,
   FileText,
   BookOpen,
+  MessageSquare,
+  Award,
+  HelpCircle,
 } from 'lucide-react';
 
-export default function Sidebar({ currentView, setCurrentView, stats, onResetData }) {
+export default function Sidebar({
+  currentView,
+  setCurrentView,
+  stats,
+  onResetData,
+  onOpenHowItWorks,
+}) {
   const [modelName, setModelName] = useState('Groq');
   const [resetting, setResetting] = useState(false);
 
@@ -27,7 +37,11 @@ export default function Sidebar({ currentView, setCurrentView, stats, onResetDat
   }, []);
 
   const handleReset = async () => {
-    if (window.confirm('Are you sure you want to reset all meetings, decisions, tasks, and conflicts? This will clear the database.')) {
+    if (
+      window.confirm(
+        'Are you sure you want to reset all meetings, decisions, tasks, and conflicts? This will clear the database.'
+      )
+    ) {
       setResetting(true);
       try {
         await fetch('/api/reset', { method: 'POST' });
@@ -43,6 +57,12 @@ export default function Sidebar({ currentView, setCurrentView, stats, onResetDat
   };
 
   const navItems = [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+      description: 'Operations overview',
+    },
     {
       id: 'new_meeting',
       label: 'New Meeting',
@@ -79,6 +99,18 @@ export default function Sidebar({ currentView, setCurrentView, stats, onResetDat
       description: 'Approval & notification gateway',
     },
     {
+      id: 'ask',
+      label: 'Ask Nirnay',
+      icon: MessageSquare,
+      description: 'Grounded AI with citations',
+    },
+    {
+      id: 'accuracy',
+      label: 'Accuracy',
+      icon: Award,
+      description: 'Benchmark scoreboard',
+    },
+    {
       id: 'digests',
       label: 'Weekly Digests',
       icon: FileText,
@@ -94,7 +126,7 @@ export default function Sidebar({ currentView, setCurrentView, stats, onResetDat
 
   return (
     <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 h-screen sticky top-0 select-none print:hidden">
-      <div>
+      <div className="overflow-y-auto">
         {/* Brand Header */}
         <div className="p-5 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
@@ -125,29 +157,31 @@ export default function Sidebar({ currentView, setCurrentView, stats, onResetDat
               <button
                 key={item.id}
                 onClick={() => setCurrentView(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold'
                     : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80'
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 truncate">
                   <Icon
-                    className={`w-4 h-4 ${
+                    className={`w-4 h-4 shrink-0 ${
                       isActive
                         ? 'text-white'
                         : item.id === 'conflicts'
                         ? 'text-rose-400'
+                        : item.id === 'accuracy'
+                        ? 'text-amber-400'
                         : item.id === 'outbox' && item.isAlert
                         ? 'text-amber-400'
                         : 'text-slate-400'
                     }`}
                   />
-                  <span className="text-left">{item.label}</span>
+                  <span className="truncate">{item.label}</span>
                 </div>
                 {item.count !== undefined && item.count > 0 && (
                   <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                    className={`text-[11px] px-2 py-0.5 rounded-full font-bold shrink-0 ${
                       isActive
                         ? 'bg-indigo-700 text-indigo-100'
                         : item.id === 'conflicts'
@@ -167,7 +201,7 @@ export default function Sidebar({ currentView, setCurrentView, stats, onResetDat
       </div>
 
       {/* Footer Info */}
-      <div className="p-4 border-t border-slate-800 text-xs text-slate-500 space-y-3">
+      <div className="p-4 border-t border-slate-800 text-xs text-slate-500 space-y-2.5 shrink-0">
         {/* Dynamic Model Indicator */}
         <div className="flex items-center justify-between text-slate-400 font-mono text-[11px]">
           <span className="flex items-center gap-1.5 truncate max-w-[170px]" title={modelName}>
@@ -179,11 +213,22 @@ export default function Sidebar({ currentView, setCurrentView, stats, onResetDat
           </span>
         </div>
 
+        {/* How It Works Modal Button */}
+        {onOpenHowItWorks && (
+          <button
+            onClick={onOpenHowItWorks}
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-indigo-400" />
+            <span>How Nirnay Works</span>
+          </button>
+        )}
+
         {/* Reset Demo Data Button */}
         <button
           onClick={handleReset}
           disabled={resetting}
-          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold text-rose-400/90 hover:text-rose-300 bg-rose-950/20 hover:bg-rose-950/50 border border-rose-900/40 transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold text-rose-400/90 hover:text-rose-300 bg-rose-950/20 hover:bg-rose-950/50 border border-rose-900/40 transition-colors"
         >
           <RotateCcw className={`w-3.5 h-3.5 ${resetting ? 'animate-spin' : ''}`} />
           <span>{resetting ? 'Resetting...' : 'Reset Demo Data'}</span>
