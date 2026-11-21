@@ -1,0 +1,191 @@
+{
+  "meetings": [
+    {
+      "meeting_id": 1,
+      "title": "Meeting 1: Launch Timeline & Core Milestones",
+      "meeting_date": "2026-12-01",
+      "expected_decisions": [
+        {
+          "topic": "launch_date",
+          "text": "Product launch date is set to 15 Jan 2027",
+          "value": "15 Jan 2027",
+          "evidence_quote": "Product launch date is 15 Jan 2027."
+        },
+        {
+          "topic": "pricing",
+          "text": "Pricing is fixed at Rs 499/month for pro plan",
+          "value": "Rs 499/month",
+          "evidence_quote": "Pricing is fixed at Rs 499/month for pro plan."
+        }
+      ],
+      "expected_tasks": [
+        {
+          "title": "Deliver finalized landing page designs and copy review",
+          "owner": "Priya",
+          "deadline": "2026-12-05",
+          "evidence_quote": "Main landing page designs and copy review 5 Dec 2026 tak complete kar lungi.",
+          "needs_clarification": false
+        },
+        {
+          "title": "Complete backend REST API endpoints and database setup",
+          "owner": "Amit",
+          "deadline": "2026-12-20",
+          "evidence_quote": "Main core REST API endpoints and database setup 20 Dec 2026 tak pura kar dunga.",
+          "needs_clarification": false
+        },
+        {
+          "title": "Deliver launch marketing campaign plan and influencer outreach strategy",
+          "owner": "Sneha",
+          "deadline": "2026-12-10",
+          "evidence_quote": "Main launch marketing campaign plan aur influencer outreach strategy 10 Dec 2026 tak submit kar dungi.",
+          "needs_clarification": false
+        },
+        {
+          "title": "Set up PostHog or Mixpanel event tracking and analytics",
+          "owner": null,
+          "deadline": null,
+          "evidence_quote": "someone should set up PostHog analytics soon, but let's figure out who will take it later.",
+          "needs_clarification": true
+        }
+      ],
+      "expected_conflicts": []
+    },
+    {
+      "meeting_id": 2,
+      "title": "Meeting 2: Progress Sync & Pricing Revision",
+      "meeting_date": "2026-12-10",
+      "expected_decisions": [
+        {
+          "topic": "pricing",
+          "text": "Revised pricing to Rs 599/month for the pro tier",
+          "value": "Rs 599/month",
+          "evidence_quote": "New pricing will be Rs 599/month for the pro tier instead of earlier Rs 499."
+        }
+      ],
+      "expected_tasks": [
+        {
+          "title": "Landing page designs and copy reviews",
+          "owner": "Priya",
+          "status": "done",
+          "evidence_quote": "Landing page designs aur copy reviews completely done hain."
+        },
+        {
+          "title": "Launch marketing campaign plan",
+          "owner": "Sneha",
+          "status": "done",
+          "evidence_quote": "launch marketing campaign plan bhi ready hai, maine drive pe share kar diya hai."
+        },
+        {
+          "title": "Payment gateway integration",
+          "owner": "Amit",
+          "status": "blocked",
+          "evidence_quote": "payment gateway integration is blocked."
+        },
+        {
+          "title": "Update pricing page to Rs 599",
+          "owner": "Priya",
+          "deadline": "2026-12-14",
+          "evidence_quote": "Main pricing page pe Rs 599 update kar dungi 14 Dec 2026 tak."
+        },
+        {
+          "title": "Wrap up auth service and token refresh",
+          "owner": "Amit",
+          "deadline": "2026-12-16",
+          "evidence_quote": "Main auth service and token refresh 16 Dec 2026 tak wrap up kar dunga."
+        },
+        {
+          "title": "Draft sanity test cases",
+          "owner": "Karan",
+          "deadline": "2026-12-15",
+          "evidence_quote": "Main sanity test cases draft kar lunga by 15 Dec 2026."
+        }
+      ],
+      "expected_conflicts": [
+        {
+          "type": "decision_conflict",
+          "topic": "pricing",
+          "description": "Pricing changed from Rs 499/month (Meeting 1) to Rs 599/month (Meeting 2)"
+        }
+      ]
+    },
+    {
+      "meeting_id": 3,
+      "title": "Meeting 3: Scope Review & Launch Postponement",
+      "meeting_date": "2026-12-18",
+      "expected_decisions": [
+        {
+          "topic": "launch_date",
+          "text": "Launch date postponed to 5 Feb 2027",
+          "value": "5 Feb 2027",
+          "evidence_quote": "Launch date is officially postponed to 5 Feb 2027."
+        }
+      ],
+      "expected_tasks": [
+        {
+          "title": "Deliver core backend APIs and auth integration",
+          "owner": "Amit",
+          "deadline": "2026-12-28",
+          "evidence_quote": "Main backend core APIs and auth integration 28 Dec 2026 tak complete kar paunga."
+        },
+        {
+          "title": "Finish end-to-end regression and integration testing",
+          "owner": "Karan",
+          "deadline": "2026-12-22",
+          "evidence_quote": "Mujhe end-to-end regression aur integration testing complete karni hai by 22 Dec 2026"
+        },
+        {
+          "title": "Mobile responsive layout polish",
+          "owner": "Priya",
+          "deadline": "2026-12-24",
+          "evidence_quote": "mobile responsive layout polish by 24 Dec 2026."
+        },
+        {
+          "title": "User onboarding walkthrough illustrations",
+          "owner": "Priya",
+          "deadline": "2026-12-25",
+          "evidence_quote": "onboarding walkthrough illustrations by 25 Dec 2026."
+        },
+        {
+          "title": "Social media launch cards for Sneha's campaign",
+          "owner": "Priya",
+          "deadline": "2026-12-24",
+          "evidence_quote": "social media launch cards by 24 Dec 2026."
+        },
+        {
+          "title": "Email newsletter templates for transactional emails",
+          "owner": "Priya",
+          "deadline": "2026-12-26",
+          "evidence_quote": "email newsletter templates by 26 Dec 2026."
+        },
+        {
+          "title": "In-app iconography refresh for dark mode",
+          "owner": "Priya",
+          "deadline": "2026-12-25",
+          "evidence_quote": "in-app iconography refresh for dark mode by 25 Dec 2026."
+        },
+        {
+          "title": "Submit press release draft",
+          "owner": "Sneha",
+          "deadline": "2026-12-23",
+          "evidence_quote": "Main press release draft 23 Dec 2026 tak deliver kar dungi."
+        }
+      ],
+      "expected_conflicts": [
+        {
+          "type": "decision_conflict",
+          "topic": "launch_date",
+          "description": "Launch date changed from 15 Jan 2027 (Meeting 1) to 5 Feb 2027 (Meeting 3)"
+        },
+        {
+          "type": "dependency_conflict",
+          "description": "Karan's integration testing is scheduled for 22 Dec 2026, which is BEFORE Amit's backend core APIs finish on 28 Dec 2026"
+        },
+        {
+          "type": "workload_overload",
+          "owner": "Priya",
+          "description": "Priya has 5 concurrent deadlines within 3 days (24 Dec - 26 Dec 2026)"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, Text, Float, Boolean, ForeignKey, DateTime
+from sqlalchemy.orm import relationship
+from .db import Base
+
+
+class Meeting(Base):
+    __tablename__ = "meetings"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String(255), nullable=False)
+    meeting_date = Column(String(50), nullable=False)  # stored as YYYY-MM-DD
+    transcript = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    decisions = relationship("Decision", back_populates="meeting", cascade="all, delete-orphan")
+    tasks = relationship("Task", back_populates="meeting", cascade="all, delete-orphan")
+
+
+class Decision(Base):
+    __tablename__ = "decisions"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    meeting_id = Column(Integer, ForeignKey("meetings.id"), nullable=False)
+    topic = Column(String(100), nullable=False, index=True)
+    text = Column(Text, nullable=False)
+    value = Column(String(255), nullable=False)
+    evidence_quote = Column(Text, nullable=False)
+    confidence = Column(Float, nullable=False, default=1.0)
+    status = Column(String(50), nullable=False, default="active")  # "active" | "superseded"
+
+    meeting = relationship("Meeting", back_populates="decisions")
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    meeting_id = Column(Integer, ForeignKey("meetings.id"), nullable=False)
+    title = Column(String(255), nullable=False)
+    owner = Column(String(100), nullable=True)
+    deadline = Column(String(50), nullable=True)  # YYYY-MM-DD or None
+    status = Column(String(50), nullable=False, default="pending")  # "pending" | "done" | "blocked"
+    evidence_quote = Column(Text, nullable=False)
+    confidence = Column(Float, nullable=False, default=1.0)
+    needs_clarification = Column(Boolean, nullable=False, default=False)
+    clarification_question = Column(Text, nullable=True)
+    depends_on_task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
+
+    meeting = relationship("Meeting", back_populates="tasks")

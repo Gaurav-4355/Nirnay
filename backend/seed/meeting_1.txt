@@ -1,0 +1,26 @@
+Rahul: Good morning team, let's lock in our launch timeline and core milestones for Nirnay.
+Priya: Morning Rahul. Landing page wireframes ready hain, bas finalize karna hai.
+Amit: Good morning. Database schema design complete ho gaya hai.
+Sneha: Hello everyone! Social media audit done hai, ready to plan the campaign.
+Karan: Morning all. QA test plan framework ready hai.
+Rahul: Great. Sabse pehla decision: launch date kya rakhein? I propose 15 Jan 2027. Koi objections?
+Amit: 15 Jan 2027 works for backend if we keep scope tight.
+Priya: Design team can easily deliver before that.
+Rahul: Theek hai, so final decision: Product launch date is 15 Jan 2027.
+Sneha: Next, pricing model pe kya faisla hai? Early bird discount ya subscription?
+Rahul: Humne decide kiya tha Rs 499 per month for the pro tier. Let's fix pro pricing at Rs 499/month.
+Amit: Agree, Rs 499 per month is competitive and attractive for Indian startups.
+Rahul: Final decision: Pricing is fixed at Rs 499/month for pro plan.
+Rahul: Now let's assign action items and deadlines.
+Priya: Main landing page designs and copy review 5 Dec 2026 tak complete kar lungi.
+Rahul: Perfect. Priya will deliver finalized landing page designs by 5 Dec 2026.
+Amit: Backend side pe, main core REST API endpoints and database setup 20 Dec 2026 tak pura kar dunga.
+Rahul: Done, Amit owns backend API development with deadline 20 Dec 2026.
+Sneha: Main launch marketing campaign plan aur influencer outreach strategy 10 Dec 2026 tak submit kar dungi.
+Rahul: Excellent. Sneha to deliver launch campaign plan by 10 Dec 2026.
+Rahul: Ek aur important cheez: event tracking and analytics setup. PostHog ya Mixpanel integrate karna padega user onboarding track karne ke liye.
+Amit: Haan, wo zaroori toh hai, par abhi kisike paas time nahi hai. Kisiko assign karein?
+Priya: Abhi mat decide karo, let's see next week kiska bandwidth free hota hai.
+Rahul: Haan, someone should set up PostHog analytics soon, but let's figure out who will take it later.
+Karan: Main QA environment setup karunga once Amit gives the test build specs.
+Rahul: Theek hai, let's reconvene next week. Great work everyone.

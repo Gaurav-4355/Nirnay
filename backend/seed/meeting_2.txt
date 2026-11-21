@@ -1,0 +1,20 @@
+Rahul: Team, weekly sync shuru karte hain. Date hai 10 Dec 2026. Pehle pichle tasks ka status lete hain.
+Priya: Good news! Landing page designs aur copy reviews completely done hain. Maine 5 Dec ko hi handoff de diya tha.
+Rahul: Awesome, landing page task is marked done. Great job Priya!
+Sneha: Aur mera launch marketing campaign plan bhi ready hai, maine drive pe share kar diya hai. So that task is done.
+Rahul: Brilliant, Sneha's campaign plan task is also done.
+Amit: Mera ek update hai with a blocker. Core REST API endpoints schedule pe chal rahe hain, but payment gateway integration is blocked.
+Rahul: Kya problem aayi Amit payment gateway mein?
+Amit: Razorpay business KYC documents verification pending hai, bank account validation stuck hai unke end pe.
+Rahul: Theek hai, so Amit's payment gateway integration task is blocked on vendor KYC. Main unke account manager ko call karta hoon.
+Sneha: Rahul, ek urgent baat pricing ko leke. Maine competitor analysis kiya, Rs 499/month is too low, we are leaving money on the table.
+Rahul: Market feedback kya kehta hai?
+Sneha: Similar B2B tools Rs 699 to Rs 999 charge kar rahe hain. If we set Rs 599/month, customer perception premium rahegi and unit economics better hongi.
+Amit: Server costs calculate karne ke baad bhi Rs 599 makes more sense.
+Rahul: Valid point. Let's revise our decision. Final decision: New pricing will be Rs 599/month for the pro tier instead of earlier Rs 499.
+Priya: Theek hai, main pricing page pe Rs 599 update kar dungi 14 Dec 2026 tak.
+Rahul: Done, Priya owns updating pricing page to Rs 599 by 14 Dec 2026.
+Amit: Main auth service and token refresh 16 Dec 2026 tak wrap up kar dunga.
+Rahul: Perfect. Amit commits to auth service by 16 Dec 2026.
+Karan: Main sanity test cases draft kar lunga by 15 Dec 2026.
+Rahul: Great, Karan to draft sanity test cases by 15 Dec 2026. Let's wrap up today's sync.
