@@ -46,6 +46,14 @@
           "deadline": null,
           "evidence_quote": "someone should set up PostHog analytics soon, but let's figure out who will take it later.",
           "needs_clarification": true
+        },
+        {
+          "title": "Set up QA environment",
+          "owner": "Karan",
+          "deadline": null,
+          "needs_clarification": true,
+          "evidence_quote": "Main QA environment setup karunga once Amit gives the test build specs.",
+          "depends_on": "Amit's backend work"
         }
       ],
       "expected_conflicts": []
@@ -62,19 +70,19 @@
           "evidence_quote": "New pricing will be Rs 599/month for the pro tier instead of earlier Rs 499."
         }
       ],
-      "expected_tasks": [
+      "expected_task_updates": [
         {
-          "title": "Landing page designs and copy reviews",
-          "owner": "Priya",
-          "status": "done",
+          "title_keyword": "landing page",
+          "new_status": "done",
           "evidence_quote": "Landing page designs aur copy reviews completely done hain."
         },
         {
-          "title": "Launch marketing campaign plan",
-          "owner": "Sneha",
-          "status": "done",
+          "title_keyword": "campaign plan",
+          "new_status": "done",
           "evidence_quote": "launch marketing campaign plan bhi ready hai, maine drive pe share kar diya hai."
-        },
+        }
+      ],
+      "expected_tasks": [
         {
           "title": "Payment gateway integration",
           "owner": "Amit",
@@ -120,18 +128,21 @@
           "evidence_quote": "Launch date is officially postponed to 5 Feb 2027."
         }
       ],
-      "expected_tasks": [
+      "expected_task_updates": [
         {
-          "title": "Deliver core backend APIs and auth integration",
-          "owner": "Amit",
-          "deadline": "2026-12-28",
+          "title_keyword": "backend",
+          "new_status": null,
+          "new_deadline": "2026-12-28",
           "evidence_quote": "Main backend core APIs and auth integration 28 Dec 2026 tak complete kar paunga."
-        },
+        }
+      ],
+      "expected_tasks": [
         {
           "title": "Finish end-to-end regression and integration testing",
           "owner": "Karan",
           "deadline": "2026-12-22",
-          "evidence_quote": "Mujhe end-to-end regression aur integration testing complete karni hai by 22 Dec 2026"
+          "evidence_quote": "Mujhe end-to-end regression aur integration testing complete karni hai by 22 Dec 2026",
+          "depends_on": "Amit's backend work"
         },
         {
           "title": "Mobile responsive layout polish",

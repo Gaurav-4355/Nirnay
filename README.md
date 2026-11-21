@@ -5,9 +5,9 @@
 
 ```bash
 # 1. Install dependencies & configure Groq API Key
-pip install -r requirements.txt && echo GROQ_API_KEY=your_groq_api_key_here > backend/.env
+pip install -r backend/requirements.txt && echo GROQ_API_KEY=your_groq_api_key_here > backend/.env
 
-# 2. Start Backend API Server (FastAPI on port 8000)
+# 2. Start Backend API Server from the PROJECT ROOT (FastAPI on port 8000)
 uvicorn backend.main:app --reload --port 8000
 
 # 3. Start Frontend Development Server (Vite on port 5173)

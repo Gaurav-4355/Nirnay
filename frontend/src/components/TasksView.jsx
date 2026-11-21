@@ -10,6 +10,8 @@ import {
   Ban,
   Quote,
   Search,
+  GitBranch,
+  RefreshCw,
 } from 'lucide-react';
 
 export default function TasksView() {
@@ -39,7 +41,6 @@ export default function TasksView() {
     fetchTasks(ownerFilter);
   }, [ownerFilter]);
 
-  // Extract unique owners for dropdown filter
   const allOwners = Array.from(
     new Set(
       tasks
@@ -69,7 +70,6 @@ export default function TasksView() {
     }
   };
 
-  // Filter tasks locally by status and search
   const filteredTasks = tasks.filter((t) => {
     if (statusFilter && t.status !== statusFilter) return false;
     if (searchQuery.trim()) {
@@ -77,17 +77,16 @@ export default function TasksView() {
       const matchTitle = t.title.toLowerCase().includes(q);
       const matchOwner = (t.owner || '').toLowerCase().includes(q);
       const matchMeeting = (t.meeting_title || '').toLowerCase().includes(q);
-      return matchTitle || matchOwner || matchMeeting;
+      const matchDep = (t.depends_on_title || '').toLowerCase().includes(q);
+      return matchTitle || matchOwner || matchMeeting || matchDep;
     }
     return true;
   });
 
-  // Summary counts
   const totalCount = tasks.length;
   const pendingCount = tasks.filter((t) => t.status === 'pending').length;
   const doneCount = tasks.filter((t) => t.status === 'done').length;
   const blockedCount = tasks.filter((t) => t.status === 'blocked').length;
-  const clarificationCount = tasks.filter((t) => t.needs_clarification).length;
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
@@ -99,7 +98,7 @@ export default function TasksView() {
             Execution Tasks Board
           </h2>
           <p className="text-sm text-slate-400">
-            Track commitments, deadlines, and execution status extracted from meetings.
+            Track commitments, dependencies, and execution status across all meetings.
           </p>
         </div>
 
@@ -108,15 +107,15 @@ export default function TasksView() {
           <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 font-medium">
             Total: <span className="font-bold text-white">{totalCount}</span>
           </div>
-          <div className="px-3 py-1.5 rounded-xl bg-amber-950/40 border border-amber-800/60 text-amber-300 font-medium flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" />
-            Pending: <span className="font-bold">{pendingCount}</span>
+          <div className="px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 font-medium flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-slate-400" />
+            Pending: <span className="font-bold text-white">{pendingCount}</span>
           </div>
-          <div className="px-3 py-1.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 font-medium flex items-center gap-1.5">
+          <div className="px-3 py-1.5 rounded-xl bg-emerald-950/50 border border-emerald-800/60 text-emerald-300 font-medium flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5" />
             Done: <span className="font-bold">{doneCount}</span>
           </div>
-          <div className="px-3 py-1.5 rounded-xl bg-rose-950/40 border border-rose-800/60 text-rose-300 font-medium flex items-center gap-1.5">
+          <div className="px-3 py-1.5 rounded-xl bg-rose-950/50 border border-rose-800/60 text-rose-300 font-medium flex items-center gap-1.5">
             <Ban className="w-3.5 h-3.5" />
             Blocked: <span className="font-bold">{blockedCount}</span>
           </div>
@@ -125,19 +124,17 @@ export default function TasksView() {
 
       {/* Filter Bar */}
       <div className="flex flex-col sm:flex-row items-center gap-3 bg-slate-900 border border-slate-800 p-3.5 rounded-2xl">
-        {/* Search */}
         <div className="relative flex-1 w-full">
           <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Search tasks, owners, meetings..."
+            placeholder="Search tasks, owners, dependencies, meetings..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
 
-        {/* Owner Filter */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <User className="w-3.5 h-3.5 text-slate-400" />
           <select
@@ -154,7 +151,6 @@ export default function TasksView() {
           </select>
         </div>
 
-        {/* Status Filter */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Filter className="w-3.5 h-3.5 text-slate-400" />
           <select
@@ -170,7 +166,7 @@ export default function TasksView() {
         </div>
       </div>
 
-      {/* Task List Table / Cards */}
+      {/* Task Cards */}
       {loading ? (
         <div className="text-center py-16 text-slate-500 text-sm italic">
           Loading tasks...
@@ -182,7 +178,7 @@ export default function TasksView() {
           <p className="text-xs text-slate-500 max-w-md mx-auto">
             {tasks.length === 0
               ? 'Analyze a meeting transcript in the "New Meeting" view to extract and save action items.'
-              : 'Try clearing your filters to view all tasks.'}
+              : 'Try adjusting your search or filters to see more tasks.'}
           </p>
         </div>
       ) : (
@@ -199,7 +195,7 @@ export default function TasksView() {
               }`}
             >
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div className="space-y-1 flex-1">
+                <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h4 className="text-sm font-semibold text-white tracking-tight">
                       {task.title}
@@ -212,13 +208,32 @@ export default function TasksView() {
                     )}
                   </div>
 
-                  <p className="text-xs text-slate-400 flex items-center gap-2">
+                  <p className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
                     <span className="text-indigo-400 font-medium">
-                      {task.meeting_title}
+                      Created in: {task.meeting_title}
                     </span>
                     <span className="text-slate-600">•</span>
-                    <span>Meeting date: {task.meeting_date}</span>
+                    <span>Date: {task.meeting_date}</span>
+
+                    {/* Updated in Meeting Tag */}
+                    {task.updated_in_meeting_title && (
+                      <>
+                        <span className="text-slate-600">•</span>
+                        <span className="px-2 py-0.5 rounded-md bg-blue-950/70 text-blue-300 border border-blue-800/80 font-medium flex items-center gap-1">
+                          <RefreshCw className="w-3 h-3 text-blue-400" />
+                          Updated in: {task.updated_in_meeting_title}
+                        </span>
+                      </>
+                    )}
                   </p>
+
+                  {/* Waits for Dependency Badge */}
+                  {task.depends_on_title && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-950/50 text-cyan-300 border border-cyan-800/60 text-xs font-medium">
+                      <GitBranch className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Waits for: <strong>{task.depends_on_title}</strong></span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Status Dropdown */}
@@ -232,13 +247,13 @@ export default function TasksView() {
                     onChange={(e) => handleStatusChange(task.id, e.target.value)}
                     className={`text-xs font-semibold px-3 py-1.5 rounded-xl border focus:outline-none cursor-pointer transition-colors ${
                       task.status === 'done'
-                        ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700'
+                        ? 'bg-emerald-950/90 text-emerald-300 border-emerald-700'
                         : task.status === 'blocked'
-                        ? 'bg-rose-950/80 text-rose-300 border-rose-700'
-                        : 'bg-amber-950/80 text-amber-300 border-amber-700'
+                        ? 'bg-rose-950/90 text-rose-300 border-rose-700'
+                        : 'bg-slate-800 text-slate-300 border-slate-700'
                     }`}
                   >
-                    <option value="pending" className="bg-slate-900 text-amber-300">
+                    <option value="pending" className="bg-slate-900 text-slate-300">
                       Pending
                     </option>
                     <option value="done" className="bg-slate-900 text-emerald-300">
@@ -286,10 +301,18 @@ export default function TasksView() {
                 </div>
               </div>
 
-              {/* Evidence Quote Snippet */}
+              {/* Status Evidence Quote (if task was updated in later meeting) */}
+              {task.status_evidence && (
+                <div className="p-2.5 rounded-xl bg-blue-950/20 border border-blue-900/40 text-xs italic text-blue-200/90 font-serif flex items-start gap-2">
+                  <Quote className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                  <span>Update Evidence: "{task.status_evidence}"</span>
+                </div>
+              )}
+
+              {/* Original Evidence Quote */}
               <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs italic text-slate-400 font-serif flex items-start gap-2">
                 <Quote className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />
-                <span>"{task.evidence_quote}"</span>
+                <span>Original Evidence: "{task.evidence_quote}"</span>
               </div>
             </div>
           ))}

@@ -6,8 +6,9 @@ import {
   CheckCircle2,
   Clock,
   Search,
-  Filter,
   Layers,
+  ArrowRight,
+  Ban,
 } from 'lucide-react';
 
 export default function DecisionsView() {
@@ -33,7 +34,6 @@ export default function DecisionsView() {
     fetchDecisions();
   }, []);
 
-  // Filter decisions
   const filteredDecisions = decisions.filter((d) => {
     if (!searchTopic.trim()) return true;
     const term = searchTopic.toLowerCase();
@@ -41,11 +41,10 @@ export default function DecisionsView() {
       d.topic.toLowerCase().includes(term) ||
       d.text.toLowerCase().includes(term) ||
       d.value.toLowerCase().includes(term) ||
-      d.meeting_title.toLowerCase().includes(term)
+      (d.meeting_title || '').toLowerCase().includes(term)
     );
   });
 
-  // Group by meeting
   const grouped = filteredDecisions.reduce((acc, d) => {
     const key = `${d.meeting_id}___${d.meeting_title}___${d.meeting_date}`;
     if (!acc[key]) acc[key] = [];
@@ -72,7 +71,7 @@ export default function DecisionsView() {
             Decisions Timeline
           </h2>
           <p className="text-sm text-slate-400">
-            Chronological log of all confirmed decisions across meetings.
+            Chronological log of all confirmed decisions across meetings with superseded history tracking.
           </p>
         </div>
 
@@ -81,7 +80,7 @@ export default function DecisionsView() {
           <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
           <input
             type="text"
-            placeholder="Search topic or value..."
+            placeholder="Search topic, value or meeting..."
             value={searchTopic}
             onChange={(e) => setSearchTopic(e.target.value)}
             className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -128,47 +127,82 @@ export default function DecisionsView() {
 
                 {/* Cards for this meeting */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-4 border-l-2 border-slate-800 ml-1.5">
-                  {decs.map((d) => (
-                    <div
-                      key={d.id}
-                      className="bg-slate-900 border border-slate-800 hover:border-slate-700 p-4 rounded-2xl space-y-3 shadow-md transition-all"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-950/80 text-indigo-300 border border-indigo-800">
-                            {d.topic}
-                          </span>
-                          <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-slate-800 text-amber-300 border border-slate-700">
-                            {d.value}
-                          </span>
+                  {decs.map((d) => {
+                    const isSuperseded = d.status === 'superseded';
+                    return (
+                      <div
+                        key={d.id}
+                        className={`p-4 rounded-2xl space-y-3 shadow-md transition-all border ${
+                          isSuperseded
+                            ? 'bg-slate-950/60 border-slate-800/60 opacity-60'
+                            : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md ${
+                                isSuperseded
+                                  ? 'bg-slate-900 text-slate-500 border border-slate-800 line-through'
+                                  : 'bg-indigo-950/80 text-indigo-300 border border-indigo-800'
+                              }`}
+                            >
+                              {d.topic}
+                            </span>
+                            <span
+                              className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-md ${
+                                isSuperseded
+                                  ? 'bg-slate-900 text-slate-500 border border-slate-800 line-through'
+                                  : 'bg-slate-800 text-amber-300 border border-slate-700'
+                              }`}
+                            >
+                              {d.value}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${
+                                isSuperseded
+                                  ? 'bg-slate-800 text-slate-400 border border-slate-700'
+                                  : 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                              }`}
+                            >
+                              {d.status}
+                            </span>
+                            {renderConfidence(d.confidence)}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${
-                              d.status === 'active'
-                                ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                                : 'bg-slate-800 text-slate-400 border border-slate-700'
-                            }`}
-                          >
-                            {d.status}
-                          </span>
-                          {renderConfidence(d.confidence)}
+
+                        {/* Struck-through text if superseded */}
+                        <p
+                          className={`text-sm font-medium ${
+                            isSuperseded ? 'text-slate-400 line-through' : 'text-slate-200'
+                          }`}
+                        >
+                          {d.text}
+                        </p>
+
+                        {/* Superseded replacement banner */}
+                        {isSuperseded && (
+                          <div className="p-2.5 rounded-xl bg-amber-950/30 border border-amber-900/50 text-xs text-amber-300/90 flex items-center gap-2 font-medium">
+                            <ArrowRight className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <span>
+                              Replaced by: <strong>{d.superseded_by_value || 'New Decision'}</strong>
+                              {d.superseded_by_meeting_title && ` (${d.superseded_by_meeting_title})`}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs italic text-slate-400 font-serif">
+                          <div className="flex items-center gap-1 text-[10px] font-mono not-italic text-slate-500 mb-0.5">
+                            <Quote className="w-3 h-3 text-indigo-400" />
+                            Evidence:
+                          </div>
+                          "{d.evidence_quote}"
                         </div>
                       </div>
-
-                      <p className="text-sm text-slate-200 font-medium">
-                        {d.text}
-                      </p>
-
-                      <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs italic text-slate-400 font-serif">
-                        <div className="flex items-center gap-1 text-[10px] font-mono not-italic text-slate-500 mb-0.5">
-                          <Quote className="w-3 h-3 text-indigo-400" />
-                          Evidence:
-                        </div>
-                        "{d.evidence_quote}"
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );

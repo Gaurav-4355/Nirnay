@@ -13,8 +13,9 @@ class Meeting(Base):
     transcript = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    decisions = relationship("Decision", back_populates="meeting", cascade="all, delete-orphan")
-    tasks = relationship("Task", back_populates="meeting", cascade="all, delete-orphan")
+    decisions = relationship("Decision", back_populates="meeting", foreign_keys="Decision.meeting_id", cascade="all, delete-orphan")
+    tasks = relationship("Task", back_populates="meeting", foreign_keys="Task.meeting_id", cascade="all, delete-orphan")
+    conflicts = relationship("Conflict", back_populates="meeting", cascade="all, delete-orphan")
 
 
 class Decision(Base):
@@ -28,8 +29,10 @@ class Decision(Base):
     evidence_quote = Column(Text, nullable=False)
     confidence = Column(Float, nullable=False, default=1.0)
     status = Column(String(50), nullable=False, default="active")  # "active" | "superseded"
+    superseded_by_id = Column(Integer, ForeignKey("decisions.id"), nullable=True)
 
-    meeting = relationship("Meeting", back_populates="decisions")
+    meeting = relationship("Meeting", back_populates="decisions", foreign_keys=[meeting_id])
+    superseded_by = relationship("Decision", remote_side=[id], foreign_keys=[superseded_by_id])
 
 
 class Task(Base):
@@ -46,5 +49,23 @@ class Task(Base):
     needs_clarification = Column(Boolean, nullable=False, default=False)
     clarification_question = Column(Text, nullable=True)
     depends_on_task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
+    status_evidence = Column(Text, nullable=True)
+    updated_in_meeting_id = Column(Integer, ForeignKey("meetings.id"), nullable=True)
 
-    meeting = relationship("Meeting", back_populates="tasks")
+    meeting = relationship("Meeting", back_populates="tasks", foreign_keys=[meeting_id])
+    depends_on_task = relationship("Task", remote_side=[id], foreign_keys=[depends_on_task_id])
+    updated_in_meeting = relationship("Meeting", foreign_keys=[updated_in_meeting_id])
+
+
+class Conflict(Base):
+    __tablename__ = "conflicts"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    meeting_id = Column(Integer, ForeignKey("meetings.id"), nullable=False)
+    type = Column(String(50), nullable=False)  # "decision_conflict" | "workload_overload" | "dependency_conflict"
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False)
+    resolution = Column(String(50), nullable=True)  # "kept_new" | "kept_old" | "acknowledged"
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    meeting = relationship("Meeting", back_populates="conflicts")

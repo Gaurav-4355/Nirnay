@@ -1,7 +1,44 @@
-import React from 'react';
-import { PlusCircle, Compass, CheckSquare, Sparkles, Database } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  PlusCircle,
+  Compass,
+  CheckSquare,
+  AlertTriangle,
+  Sparkles,
+  RotateCcw,
+} from 'lucide-react';
 
-export default function Sidebar({ currentView, setCurrentView, stats }) {
+export default function Sidebar({ currentView, setCurrentView, stats, onResetData }) {
+  const [modelName, setModelName] = useState('Groq');
+  const [resetting, setResetting] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.model) {
+          setModelName(data.model);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleReset = async () => {
+    if (window.confirm('Are you sure you want to reset all meetings, decisions, tasks, and conflicts? This will clear the database.')) {
+      setResetting(true);
+      try {
+        await fetch('/api/reset', { method: 'POST' });
+        if (onResetData) {
+          onResetData();
+        }
+      } catch (err) {
+        console.error('Error resetting database:', err);
+      } finally {
+        setResetting(false);
+      }
+    }
+  };
+
   const navItems = [
     {
       id: 'new_meeting',
@@ -22,6 +59,13 @@ export default function Sidebar({ currentView, setCurrentView, stats }) {
       icon: CheckSquare,
       count: stats?.tasksCount,
       description: 'Execution tracking board',
+    },
+    {
+      id: 'conflicts',
+      label: 'Conflicts',
+      icon: AlertTriangle,
+      count: stats?.conflictsCount,
+      description: 'Cross-meeting conflicts log',
     },
   ];
 
@@ -65,14 +109,16 @@ export default function Sidebar({ currentView, setCurrentView, stats }) {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : item.id === 'conflicts' ? 'text-rose-400' : 'text-slate-400'}`} />
                   <span className="text-left">{item.label}</span>
                 </div>
                 {item.count !== undefined && item.count > 0 && (
                   <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
+                    className={`text-xs px-2 py-0.5 rounded-full font-bold ${
                       isActive
                         ? 'bg-indigo-700 text-indigo-100'
+                        : item.id === 'conflicts'
+                        ? 'bg-rose-950 text-rose-300 border border-rose-800'
                         : 'bg-slate-800 text-slate-300 border border-slate-700'
                     }`}
                   >
@@ -86,19 +132,27 @@ export default function Sidebar({ currentView, setCurrentView, stats }) {
       </div>
 
       {/* Footer Info */}
-      <div className="p-4 border-t border-slate-800 text-xs text-slate-500 space-y-2">
+      <div className="p-4 border-t border-slate-800 text-xs text-slate-500 space-y-3">
+        {/* Dynamic Model Indicator */}
         <div className="flex items-center justify-between text-slate-400 font-mono text-[11px]">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            LLM: Groq LLaMA-3.3
+          <span className="flex items-center gap-1.5 truncate max-w-[170px]" title={modelName}>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse"></span>
+            <span className="truncate">{modelName}</span>
           </span>
-          <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">
-            v1.0
+          <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800 text-[10px]">
+            active
           </span>
         </div>
-        <p className="text-[11px] text-slate-500 leading-tight">
-          Hinglish transcript intelligence with strict human confirmation before execution.
-        </p>
+
+        {/* Reset Demo Data Button */}
+        <button
+          onClick={handleReset}
+          disabled={resetting}
+          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold text-rose-400/90 hover:text-rose-300 bg-rose-950/20 hover:bg-rose-950/50 border border-rose-900/40 transition-colors"
+        >
+          <RotateCcw className={`w-3.5 h-3.5 ${resetting ? 'animate-spin' : ''}`} />
+          <span>{resetting ? 'Resetting...' : 'Reset Demo Data'}</span>
+        </button>
       </div>
     </aside>
   );
