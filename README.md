@@ -1,9 +1,17 @@
-# Nirnay - Meeting-to-Execution Agent
+# Nirnay
 > *"Meeting ke faisle, kaam mein badlo."*
+> An AI agent that turns meeting talk into tracked, conflict-checked action, with a human approving every step.
 
-Nirnay reads conversational meeting transcripts in Hindi, English, and Hinglish, extracts decisions and tasks with exact quote citations, remembers past commitments across meetings, detects 3 distinct types of cross-meeting conflicts, and gates every external ticket or notification behind human confirmation in an Outbox.
+[Live Demo](<LIVE_DEMO_URL>) | [Demo Video](<VIDEO_URL>) | [LinkedIn Post](<LINKEDIN_POST_URL>) | [Source Code](<SOURCE_CODE_URL>)
 
----
+[![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.0.0-lightgrey.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://reactjs.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-3.45-lightgrey.svg)](https://sqlite.org/)
+[![Groq](https://img.shields.io/badge/Groq-API-green.svg)](https://groq.com/)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](##)
+
+![Nirnay conflict detection](docs/screenshots/01-conflicts.png)
 
 ## 🌟 Feature List
 
