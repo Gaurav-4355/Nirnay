@@ -6,6 +6,9 @@ import {
   AlertTriangle,
   Sparkles,
   RotateCcw,
+  Send,
+  FileText,
+  BookOpen,
 } from 'lucide-react';
 
 export default function Sidebar({ currentView, setCurrentView, stats, onResetData }) {
@@ -67,10 +70,30 @@ export default function Sidebar({ currentView, setCurrentView, stats, onResetDat
       count: stats?.conflictsCount,
       description: 'Cross-meeting conflicts log',
     },
+    {
+      id: 'outbox',
+      label: 'Outbox',
+      icon: Send,
+      count: stats?.pendingOutboxCount,
+      isAlert: stats?.pendingOutboxCount > 0,
+      description: 'Approval & notification gateway',
+    },
+    {
+      id: 'digests',
+      label: 'Weekly Digests',
+      icon: FileText,
+      description: 'Team commitment summaries',
+    },
+    {
+      id: 'brief',
+      label: 'Meeting Brief',
+      icon: BookOpen,
+      description: 'Pre-meeting printable pack',
+    },
   ];
 
   return (
-    <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 h-screen sticky top-0 select-none">
+    <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 h-screen sticky top-0 select-none print:hidden">
       <div>
         {/* Brand Header */}
         <div className="p-5 border-b border-slate-800">
@@ -94,7 +117,7 @@ export default function Sidebar({ currentView, setCurrentView, stats, onResetDat
         </div>
 
         {/* Navigation */}
-        <nav className="p-3 space-y-1.5">
+        <nav className="p-3 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
@@ -109,7 +132,17 @@ export default function Sidebar({ currentView, setCurrentView, stats, onResetDat
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : item.id === 'conflicts' ? 'text-rose-400' : 'text-slate-400'}`} />
+                  <Icon
+                    className={`w-4 h-4 ${
+                      isActive
+                        ? 'text-white'
+                        : item.id === 'conflicts'
+                        ? 'text-rose-400'
+                        : item.id === 'outbox' && item.isAlert
+                        ? 'text-amber-400'
+                        : 'text-slate-400'
+                    }`}
+                  />
                   <span className="text-left">{item.label}</span>
                 </div>
                 {item.count !== undefined && item.count > 0 && (
@@ -119,6 +152,8 @@ export default function Sidebar({ currentView, setCurrentView, stats, onResetDat
                         ? 'bg-indigo-700 text-indigo-100'
                         : item.id === 'conflicts'
                         ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                        : item.id === 'outbox'
+                        ? 'bg-amber-950 text-amber-300 border border-amber-800 animate-pulse'
                         : 'bg-slate-800 text-slate-300 border border-slate-700'
                     }`}
                   >

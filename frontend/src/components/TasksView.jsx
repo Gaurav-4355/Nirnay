@@ -12,6 +12,7 @@ import {
   Search,
   GitBranch,
   RefreshCw,
+  ExternalLink,
 } from 'lucide-react';
 
 export default function TasksView() {
@@ -21,6 +22,7 @@ export default function TasksView() {
   const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingTaskId, setUpdatingTaskId] = useState(null);
+  const [integrations, setIntegrations] = useState({ trello: false, webhook: false });
 
   const fetchTasks = (owner = '') => {
     setLoading(true);
@@ -39,6 +41,10 @@ export default function TasksView() {
 
   useEffect(() => {
     fetchTasks(ownerFilter);
+    fetch('/api/integrations/status')
+      .then((res) => res.json())
+      .then((data) => setIntegrations(data))
+      .catch(() => {});
   }, [ownerFilter]);
 
   const allOwners = Array.from(
@@ -104,6 +110,11 @@ export default function TasksView() {
 
         {/* Stats Badges */}
         <div className="flex items-center gap-2 flex-wrap text-xs">
+          {!integrations.trello && (
+            <span className="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 font-mono text-[11px]">
+              Internal tracker mode (Trello not configured)
+            </span>
+          )}
           <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 font-medium">
             Total: <span className="font-bold text-white">{totalCount}</span>
           </div>
@@ -293,6 +304,18 @@ export default function TasksView() {
                     {task.deadline || 'No deadline'}
                   </span>
                 </div>
+
+                {task.trello_url && (
+                  <a
+                    href={task.trello_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-950/40 hover:bg-indigo-950/80 border border-indigo-800/60 px-2 py-0.5 rounded-md transition-colors"
+                  >
+                    <span>Open in Trello</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
 
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-500 ml-auto">
                   <span className="font-mono">

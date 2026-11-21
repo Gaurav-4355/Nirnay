@@ -177,6 +177,8 @@ class TaskOut(BaseModel):
     status_evidence: Optional[str] = None
     updated_in_meeting_id: Optional[int] = None
     updated_in_meeting_title: Optional[str] = None
+    trello_card_id: Optional[str] = None
+    trello_url: Optional[str] = None
     meeting_title: Optional[str] = None
     meeting_date: Optional[str] = None
 
@@ -197,6 +199,45 @@ class ConflictOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class TodaySettingRequest(BaseModel):
+    date: Optional[str] = None  # "YYYY-MM-DD" or None to reset to real date
+
+
+class TodaySettingResponse(BaseModel):
+    today: str
+    simulated: bool
+
+
+class IntegrationsStatusResponse(BaseModel):
+    trello: bool
+    webhook: bool
+
+
+class OutboxItemOut(BaseModel):
+    id: int
+    kind: str  # "tracker_create" | "tracker_update" | "reminder" | "digest"
+    target: str  # "trello" | "webhook"
+    recipient: Optional[str] = None
+    title: str
+    body: str
+    payload: Optional[str] = None
+    related_task_id: Optional[int] = None
+    dedupe_key: Optional[str] = None
+    status: str  # "pending" | "sent" | "rejected" | "failed"
+    error: Optional[str] = None
+    created_at: datetime
+    sent_at: Optional[datetime] = None
+    trello_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class OutboxItemPatch(BaseModel):
+    title: Optional[str] = None
+    body: Optional[str] = None
 
 
 class MeetingOut(BaseModel):

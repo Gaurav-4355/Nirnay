@@ -5,8 +5,8 @@ from fastapi import FastAPI, Depends, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from .db import engine, Base, get_db
-from .models import Meeting, Decision, Task, Conflict
+from .db import engine, Base, get_db, init_and_migrate_db
+from .models import Meeting, Decision, Task, Conflict, OutboxItem, AppSetting
 from .llm import MODEL_NAME
 from .schemas import (
     MeetingAnalyzeRequest,
@@ -18,11 +18,29 @@ from .schemas import (
     TaskOut,
     ConflictOut,
     TaskUpdate,
+    TodaySettingRequest,
+    TodaySettingResponse,
+    IntegrationsStatusResponse,
+    OutboxItemOut,
+    OutboxItemPatch,
 )
 from .services.meeting_service import analyze_meeting
+from .services.time_service import get_today, get_today_str, get_today_status, set_simulated_today
+from .services.trello import is_trello_configured
+from .services.notify import is_webhook_configured
+from .services.outbox_service import (
+    queue_tracker_create,
+    queue_tracker_update,
+    approve_outbox_item,
+    reject_outbox_item,
+    approve_all_pending,
+)
+from .services.reminders import scan_and_queue_reminders
+from .services.digest import generate_weekly_digests
+from .services.brief import generate_meeting_brief
 
-# Create SQLite tables on startup
-Base.metadata.create_all(bind=engine)
+# Initialize DB and automatically migrate any new columns/tables without deleting existing DB
+init_and_migrate_db(engine)
 
 app = FastAPI(
     title="Nirnay - Meeting-to-Execution Agent",
@@ -51,9 +69,39 @@ def health_check():
     }
 
 
+# --- Settings / Simulated Today Endpoints ---
+@app.get("/api/settings/today", response_model=TodaySettingResponse)
+def get_today_endpoint(db: Session = Depends(get_db)):
+    """Returns current effective date and whether it is simulated."""
+    today_str, simulated = get_today_status(db)
+    return TodaySettingResponse(today=today_str, simulated=simulated)
+
+
+@app.put("/api/settings/today", response_model=TodaySettingResponse)
+def set_today_endpoint(req: TodaySettingRequest, db: Session = Depends(get_db)):
+    """Sets a simulated date (YYYY-MM-DD) or null to revert to the real date."""
+    try:
+        today_str, simulated = set_simulated_today(db, req.date)
+        return TodaySettingResponse(today=today_str, simulated=simulated)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
+
+
+# --- Integrations Status ---
+@app.get("/api/integrations/status", response_model=IntegrationsStatusResponse)
+def get_integrations_status():
+    """Returns whether integrations are configured (booleans only, never keys)."""
+    return IntegrationsStatusResponse(
+        trello=is_trello_configured(),
+        webhook=is_webhook_configured(),
+    )
+
+
+# --- Reset Endpoint ---
 @app.post("/api/reset")
 def reset_database(db: Session = Depends(get_db)):
-    """Deletes all meetings, decisions, tasks, and conflicts from the database."""
+    """Deletes all meetings, decisions, tasks, conflicts, and outbox items."""
+    db.query(OutboxItem).delete()
     db.query(Conflict).delete()
     db.query(Decision).delete()
     db.query(Task).delete()
@@ -62,6 +110,7 @@ def reset_database(db: Session = Depends(get_db)):
     return {"status": "ok", "message": "All database records have been reset."}
 
 
+# --- Demo Meetings ---
 @app.get("/api/seed/demo-meetings")
 def get_demo_meetings():
     """Returns the 3 demo meetings from backend/seed/ to populate the frontend form."""
@@ -101,6 +150,7 @@ def get_demo_meetings():
     return demos
 
 
+# --- Core Flow: Analyze & Confirm ---
 @app.post("/api/meetings/analyze", response_model=MeetingAnalyzeResponse)
 def analyze_meeting_endpoint(request: MeetingAnalyzeRequest, db: Session = Depends(get_db)):
     """
@@ -141,7 +191,8 @@ def analyze_meeting_endpoint(request: MeetingAnalyzeRequest, db: Session = Depen
 def confirm_meeting_endpoint(request: MeetingConfirmRequest, db: Session = Depends(get_db)):
     """
     Step 2: Save the meeting, apply task updates, resolve decision conflicts,
-    save new tasks in two passes for dependencies, and store conflict records.
+    save new tasks in two passes for dependencies, store conflict records,
+    and automatically queue outbox items for new tasks / updates.
     """
     if not request.title.strip() or not request.transcript.strip():
         raise HTTPException(
@@ -158,12 +209,14 @@ def confirm_meeting_endpoint(request: MeetingConfirmRequest, db: Session = Depen
     db.add(db_meeting)
     db.flush()
 
-    # 2. Apply task_updates
+    # 2. Apply task_updates & queue tracker_update if applicable
     for tu in request.task_updates:
-        # Check if included
         if getattr(tu, "included", True):
             existing_task = db.query(Task).filter(Task.id == tu.task_id).first()
             if existing_task:
+                status_changed = bool(tu.new_status and tu.new_status != existing_task.status)
+                deadline_changed = bool(tu.new_deadline and tu.new_deadline != existing_task.deadline)
+
                 if tu.new_status:
                     existing_task.status = tu.new_status
                 if tu.new_deadline:
@@ -171,25 +224,29 @@ def confirm_meeting_endpoint(request: MeetingConfirmRequest, db: Session = Depen
                 existing_task.status_evidence = tu.evidence_quote
                 existing_task.updated_in_meeting_id = db_meeting.id
 
+                # Queue tracker_update in outbox
+                if status_changed or deadline_changed:
+                    queue_tracker_update(
+                        db=db,
+                        task=existing_task,
+                        new_status=tu.new_status,
+                        new_deadline=tu.new_deadline,
+                        evidence=tu.evidence_quote,
+                    )
+
     # 3. Conflict resolution map (keyed by topic)
     resolutions_by_topic: Dict[str, str] = {}
-    resolutions_by_old_id: Dict[int, str] = {}
     for cr in request.conflict_resolutions:
         res = cr.get("resolution")
         topic = cr.get("topic")
-        old_id = cr.get("old_decision_id")
         if topic:
             resolutions_by_topic[topic.strip().lower()] = res
-        if old_id:
-            resolutions_by_old_id[old_id] = res
 
     # 4. Save Decisions
-    created_decisions = []
     for d in request.decisions:
         topic_key = d.topic.strip().lower()
         res = resolutions_by_topic.get(topic_key)
 
-        # Default decision status
         status_to_set = "active"
         if res == "kept_old":
             status_to_set = "superseded"
@@ -205,9 +262,7 @@ def confirm_meeting_endpoint(request: MeetingConfirmRequest, db: Session = Depen
         )
         db.add(db_decision)
         db.flush()
-        created_decisions.append(db_decision)
 
-        # If kept_new, supersede the old active decision
         if res == "kept_new":
             old_decision = (
                 db.query(Decision)
@@ -223,7 +278,6 @@ def confirm_meeting_endpoint(request: MeetingConfirmRequest, db: Session = Depen
                 old_decision.superseded_by_id = db_decision.id
 
     # 5. Save new tasks (Two-pass for dependencies)
-    # Pass 1: create tasks and assign existing dependencies
     created_tasks: List[Task] = []
     for t in request.tasks:
         db_task = Task(
@@ -243,14 +297,16 @@ def confirm_meeting_endpoint(request: MeetingConfirmRequest, db: Session = Depen
 
     db.flush()
 
-    # Pass 2: resolve depends_on_new_task_index
     for idx, t in enumerate(request.tasks):
         if t.depends_on_new_task_index is not None and 0 <= t.depends_on_new_task_index < len(created_tasks):
             created_tasks[idx].depends_on_task_id = created_tasks[t.depends_on_new_task_index].id
 
+    # Queue tracker_create outbox items for all newly confirmed tasks
+    for new_task in created_tasks:
+        queue_tracker_create(db, new_task, db_meeting)
+
     # 6. Save Conflicts
     for idx, c in enumerate(request.conflicts):
-        # Find matching resolution
         res = None
         for cr in request.conflict_resolutions:
             if cr.get("conflict_index") == idx:
@@ -276,6 +332,111 @@ def confirm_meeting_endpoint(request: MeetingConfirmRequest, db: Session = Depen
     return db_meeting
 
 
+# --- Outbox Endpoints ---
+@app.get("/api/outbox", response_model=List[OutboxItemOut])
+def list_outbox_items(
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Lists outbox items optionally filtered by status, newest first."""
+    query = db.query(OutboxItem)
+    if status and status.strip():
+        query = query.filter(OutboxItem.status == status.strip().lower())
+    items = query.order_by(OutboxItem.created_at.desc(), OutboxItem.id.desc()).all()
+
+    results = []
+    for item in items:
+        trello_link = item.related_task.trello_url if item.related_task else None
+        results.append(
+            OutboxItemOut(
+                id=item.id,
+                kind=item.kind,
+                target=item.target,
+                recipient=item.recipient,
+                title=item.title,
+                body=item.body,
+                payload=item.payload,
+                related_task_id=item.related_task_id,
+                dedupe_key=item.dedupe_key,
+                status=item.status,
+                error=item.error,
+                created_at=item.created_at,
+                sent_at=item.sent_at,
+                trello_url=trello_link,
+            )
+        )
+    return results
+
+
+@app.patch("/api/outbox/{item_id}", response_model=OutboxItemOut)
+def patch_outbox_item(
+    item_id: int,
+    patch: OutboxItemPatch,
+    db: Session = Depends(get_db),
+):
+    """Allows editing title and body of an outbox item while it is pending."""
+    item = db.query(OutboxItem).filter(OutboxItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Outbox item not found")
+    if item.status != "pending":
+        raise HTTPException(status_code=400, detail="Cannot edit an item that is already processed")
+
+    if patch.title is not None:
+        item.title = patch.title.strip()
+    if patch.body is not None:
+        item.body = patch.body.strip()
+
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.post("/api/outbox/{item_id}/approve")
+def approve_item_endpoint(item_id: int, db: Session = Depends(get_db)):
+    """Executes the outbox item (calls external Trello or Webhook, or marks sent in internal mode)."""
+    item = db.query(OutboxItem).filter(OutboxItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Outbox item not found")
+    return approve_outbox_item(db, item)
+
+
+@app.post("/api/outbox/{item_id}/reject")
+def reject_item_endpoint(item_id: int, db: Session = Depends(get_db)):
+    """Rejects an outbox item so it is never sent."""
+    item = db.query(OutboxItem).filter(OutboxItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Outbox item not found")
+    return reject_outbox_item(db, item)
+
+
+@app.post("/api/outbox/approve-all")
+def approve_all_endpoint(db: Session = Depends(get_db)):
+    """Approves and executes all pending outbox items."""
+    return approve_all_pending(db)
+
+
+# --- Reminders Endpoint ---
+@app.post("/api/reminders/scan")
+def scan_reminders_endpoint(db: Session = Depends(get_db)):
+    """Scans all active tasks against current simulated today and queues reminders in outbox."""
+    return scan_and_queue_reminders(db)
+
+
+# --- Weekly Digest Endpoint ---
+@app.post("/api/digests/generate")
+def generate_digests_endpoint(db: Session = Depends(get_db)):
+    """Generates per-person weekly execution digests and queues them in outbox."""
+    return generate_weekly_digests(db)
+
+
+# --- Meeting Brief Endpoint ---
+@app.get("/api/brief")
+def get_meeting_brief_endpoint(db: Session = Depends(get_db)):
+    """Returns deterministic pre-meeting brief data + grounded agenda suggestions."""
+    return generate_meeting_brief(db)
+
+
+# --- Lists & Detail Endpoints ---
 @app.get("/api/meetings", response_model=List[MeetingListItem])
 def list_meetings(db: Session = Depends(get_db)):
     """List all meetings with counts of decisions, tasks, and conflicts."""
@@ -343,7 +504,7 @@ def list_decisions(db: Session = Depends(get_db)):
 
 @app.get("/api/tasks", response_model=List[TaskOut])
 def list_tasks(owner: Optional[str] = Query(None), db: Session = Depends(get_db)):
-    """List tasks with optional ?owner= filter and dependency titles."""
+    """List tasks with optional ?owner= filter, dependencies, and Trello card URLs."""
     query = (
         db.query(Task, Meeting)
         .join(Meeting, Task.meeting_id == Meeting.id)
@@ -353,7 +514,6 @@ def list_tasks(owner: Optional[str] = Query(None), db: Session = Depends(get_db)
 
     tasks_with_meetings = query.order_by(Task.deadline.asc().nullslast(), Task.id.asc()).all()
 
-    # Preload all task titles for dependency display
     all_task_titles = {t[0].id: t[0].title for t in tasks_with_meetings}
     all_meeting_titles = {m.id: m.title for m in db.query(Meeting).all()}
 
@@ -384,6 +544,8 @@ def list_tasks(owner: Optional[str] = Query(None), db: Session = Depends(get_db)
                 status_evidence=t.status_evidence,
                 updated_in_meeting_id=t.updated_in_meeting_id,
                 updated_in_meeting_title=upd_title,
+                trello_card_id=t.trello_card_id,
+                trello_url=t.trello_url,
                 meeting_title=m.title,
                 meeting_date=m.meeting_date,
             )
@@ -425,6 +587,9 @@ def update_task(task_id: int, updates: TaskUpdate, db: Session = Depends(get_db)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    old_status = task.status
+    old_deadline = task.deadline
+
     if updates.status is not None:
         if updates.status not in ("pending", "done", "blocked"):
             raise HTTPException(status_code=400, detail="Invalid task status")
@@ -439,6 +604,15 @@ def update_task(task_id: int, updates: TaskUpdate, db: Session = Depends(get_db)
         task.deadline = updates.deadline.strip() if updates.deadline.strip() else None
         if task.deadline and task.owner and task.needs_clarification:
             task.needs_clarification = False
+
+    # Queue tracker_update if status or deadline changed
+    if (updates.status and updates.status != old_status) or (updates.deadline and updates.deadline != old_deadline):
+        queue_tracker_update(
+            db=db,
+            task=task,
+            new_status=updates.status,
+            new_deadline=updates.deadline,
+        )
 
     db.commit()
     db.refresh(task)
@@ -463,6 +637,8 @@ def update_task(task_id: int, updates: TaskUpdate, db: Session = Depends(get_db)
         status_evidence=task.status_evidence,
         updated_in_meeting_id=task.updated_in_meeting_id,
         updated_in_meeting_title=upd_m.title if upd_m else None,
+        trello_card_id=task.trello_card_id,
+        trello_url=task.trello_url,
         meeting_title=meeting.title if meeting else None,
         meeting_date=meeting.meeting_date if meeting else None,
     )

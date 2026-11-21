@@ -4,6 +4,13 @@ from sqlalchemy.orm import relationship
 from .db import Base
 
 
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    key = Column(String(100), primary_key=True)
+    value = Column(Text, nullable=True)
+
+
 class Meeting(Base):
     __tablename__ = "meetings"
 
@@ -51,10 +58,13 @@ class Task(Base):
     depends_on_task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
     status_evidence = Column(Text, nullable=True)
     updated_in_meeting_id = Column(Integer, ForeignKey("meetings.id"), nullable=True)
+    trello_card_id = Column(String(100), nullable=True)
+    trello_url = Column(String(500), nullable=True)
 
     meeting = relationship("Meeting", back_populates="tasks", foreign_keys=[meeting_id])
     depends_on_task = relationship("Task", remote_side=[id], foreign_keys=[depends_on_task_id])
     updated_in_meeting = relationship("Meeting", foreign_keys=[updated_in_meeting_id])
+    outbox_items = relationship("OutboxItem", back_populates="related_task")
 
 
 class Conflict(Base):
@@ -69,3 +79,23 @@ class Conflict(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     meeting = relationship("Meeting", back_populates="conflicts")
+
+
+class OutboxItem(Base):
+    __tablename__ = "outbox_items"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    kind = Column(String(50), nullable=False)  # "tracker_create" | "tracker_update" | "reminder" | "digest"
+    target = Column(String(50), nullable=False)  # "trello" | "webhook"
+    recipient = Column(String(100), nullable=True)
+    title = Column(String(255), nullable=False)
+    body = Column(Text, nullable=False)
+    payload = Column(Text, nullable=True)  # JSON text
+    related_task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
+    dedupe_key = Column(String(255), unique=True, index=True, nullable=True)
+    status = Column(String(50), nullable=False, default="pending")  # "pending" | "sent" | "rejected" | "failed"
+    error = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    sent_at = Column(DateTime, nullable=True)
+
+    related_task = relationship("Task", back_populates="outbox_items", foreign_keys=[related_task_id])
