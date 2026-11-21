@@ -224,10 +224,10 @@ export default function DecisionsView() {
                       <div className="md:max-w-xs shrink-0 pt-0.5">
                         <button
                           onClick={() => handleOpenQuoteDrawer(d)}
-                          className="w-full text-left group border-l-2 border-stone-300 hover:border-indigo-600 pl-2.5 py-1 text-xs transition-colors rounded-r hover:bg-white"
+                          className="w-full text-left group border-l-2 border-[#e7e9ee] hover:border-[#1e35c7] pl-2.5 py-1 text-xs transition-colors rounded-r hover:bg-[#f7f8fa]"
                           title="Click to view quotation in transcript"
                         >
-                          <div className="flex items-center gap-1 text-[10px] text-stone-400 group-hover:text-indigo-600 mb-0.5">
+                          <div className="flex items-center gap-1 text-[10px] text-[#8a90a2] group-hover:text-[#1e35c7] mb-0.5">
                             <Quote className="w-2.5 h-2.5" />
                             <span>Evidence citation</span>
                           </div>

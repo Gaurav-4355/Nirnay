@@ -1,13 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Quote, Search } from 'lucide-react';
-
-const SPEAKER_COLORS = {
-  Rahul: 'text-blue-400 bg-blue-950/60 border-blue-800/80',
-  Priya: 'text-purple-400 bg-purple-950/60 border-purple-800/80',
-  Amit: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/80',
-  Sneha: 'text-amber-400 bg-amber-950/60 border-amber-800/80',
-  Karan: 'text-rose-400 bg-rose-950/60 border-rose-800/80',
-};
+import { Quote } from 'lucide-react';
+import Avatar from '../ui/Avatar';
 
 export default function TranscriptHighlighter({ transcript, activeQuote }) {
   const containerRef = useRef(null);
@@ -25,8 +18,8 @@ export default function TranscriptHighlighter({ transcript, activeQuote }) {
 
   if (!transcript) {
     return (
-      <div className="h-full flex items-center justify-center text-slate-600 text-sm italic p-6">
-        No transcript loaded. Enter or load a transcript on the left.
+      <div className="h-full flex items-center justify-center text-[#8a90a2] text-[13px] italic p-6">
+        No transcript loaded. Enter or select a transcript on the left.
       </div>
     );
   }
@@ -35,31 +28,32 @@ export default function TranscriptHighlighter({ transcript, activeQuote }) {
 
   // Helper to determine if a line matches the activeQuote
   const isLineActive = (line) => {
-    if (!activeQuote || !activeQuote.evidence_quote) return false;
-    const cleanQuote = activeQuote.evidence_quote.trim().toLowerCase();
+    if (!activeQuote) return false;
+    const targetQuote = typeof activeQuote === 'string' ? activeQuote : activeQuote.evidence_quote;
+    if (!targetQuote) return false;
+    const cleanQuote = targetQuote.trim().toLowerCase();
     const cleanLine = line.trim().toLowerCase();
     if (!cleanQuote || !cleanLine) return false;
     return cleanLine.includes(cleanQuote) || cleanQuote.includes(cleanLine);
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+    <div className="flex flex-col h-full bg-white border border-[#e7e9ee] rounded-[10px] overflow-hidden">
       {/* Header */}
-      <div className="p-3.5 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
+      <div className="px-4 py-3 bg-[#f7f8fa] border-b border-[#e7e9ee] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Quote className="w-4 h-4 text-indigo-400" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-            Transcript Inspector
+          <Quote className="w-3.5 h-3.5 text-[#5e6477]" />
+          <span className="text-[12px] font-semibold text-[#0f1222]">
+            Transcript record
           </span>
         </div>
         {activeQuote ? (
-          <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 animate-pulse">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-            Highlighted Quote
+          <span className="text-[11px] font-medium text-[#0f1222] bg-[#ffe066] px-2 py-0.5 rounded-[3px]">
+            Citing line
           </span>
         ) : (
-          <span className="text-xs text-slate-500">
-            Click any evidence quote to highlight
+          <span className="text-[11px] text-[#8a90a2]">
+            Click any quote to inspect
           </span>
         )}
       </div>
@@ -67,7 +61,7 @@ export default function TranscriptHighlighter({ transcript, activeQuote }) {
       {/* Transcript Text Body */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-2 font-mono text-xs leading-relaxed"
+        className="flex-1 overflow-y-auto p-4 space-y-3 leading-relaxed"
       >
         {lines.map((line, idx) => {
           if (!line.trim()) return <div key={idx} className="h-2"></div>;
@@ -76,42 +70,44 @@ export default function TranscriptHighlighter({ transcript, activeQuote }) {
           const speaker = match ? match[1] : null;
           const speech = match ? match[2] : line;
           const active = isLineActive(line);
-          const speakerBadgeClass = speaker && SPEAKER_COLORS[speaker]
-            ? SPEAKER_COLORS[speaker]
-            : 'text-slate-400 bg-slate-800/80 border-slate-700';
 
           return (
             <div
               key={idx}
               ref={active ? activeLineRef : null}
-              className={`p-2.5 rounded-xl transition-all duration-300 border ${
+              className={`p-2 rounded-[6px] transition-colors ${
                 active
-                  ? 'bg-amber-950/40 border-amber-400 shadow-lg shadow-amber-950/50 ring-2 ring-amber-500/30 translate-x-1'
-                  : 'bg-slate-950/40 border-slate-800/60 hover:bg-slate-800/40'
+                  ? 'bg-[#ffe066]/30 border-l-2 border-[#1e35c7]'
+                  : 'hover:bg-[#f7f8fa]'
               }`}
             >
               <div className="flex items-start gap-2.5">
-                <span className="text-[10px] text-slate-600 select-none w-5 text-right shrink-0 pt-0.5">
+                <span className="text-[12px] text-[#8a90a2] select-none w-6 text-right shrink-0 pt-0.5 tabular-nums">
                   {idx + 1}
                 </span>
 
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   {speaker && (
-                    <span
-                      className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded-md border mr-2 uppercase tracking-wide select-none ${speakerBadgeClass}`}
-                    >
-                      {speaker}
-                    </span>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <Avatar name={speaker} size="xs" />
+                      <span className="font-sans text-[12px] font-semibold text-[#0f1222]">
+                        {speaker}
+                      </span>
+                    </div>
                   )}
-                  <span
-                    className={
-                      active
-                        ? 'text-amber-100 font-semibold bg-amber-500/20 px-1 py-0.5 rounded'
-                        : 'text-slate-300'
-                    }
+                  <p
+                    className={`font-serif text-[15.5px] leading-relaxed ${
+                      active ? 'text-[#0f1222] font-medium' : 'text-[#0f1222]'
+                    }`}
                   >
-                    {speech}
-                  </span>
+                    {active ? (
+                      <mark className="bg-[#ffe066] text-[#0f1222] px-0.5 rounded-[2px]">
+                        {speech}
+                      </mark>
+                    ) : (
+                      speech
+                    )}
+                  </p>
                 </div>
               </div>
             </div>

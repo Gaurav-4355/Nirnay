@@ -2,17 +2,12 @@ import React, { useState, useEffect } from 'react';
 import {
   FileText,
   Sparkles,
-  User,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
   Send,
+  CheckCircle2,
   Calendar,
-  Layers,
-  CheckSquare,
-  AlertCircle,
-  ArrowRight,
 } from 'lucide-react';
+import Avatar from '../ui/Avatar';
+import StampBadge from '../ui/StampBadge';
 
 export default function DigestsView({ onNavigateToOutbox }) {
   const [loading, setLoading] = useState(false);
@@ -51,32 +46,31 @@ export default function DigestsView({ onNavigateToOutbox }) {
         const data = await res.json();
         setDigestsData(data);
         setNotification(
-          `Generated weekly digests for ${data.team_size || data.digests?.length || 0} team member(s) (week of ${data.week_start}). Queued in Outbox for approval.`
+          `Generated weekly summaries for ${data.team_size || data.digests?.length || 0} team member(s) (week of ${data.week_start}). Queued in Waiting for approval.`
         );
         fetchExistingDigests();
       } else {
         const errData = await res.json().catch(() => ({}));
-        setNotification(`Error generating digests: ${errData.detail || 'Request failed'}`);
+        setNotification(`Error generating summaries: ${errData.detail || 'Request failed'}`);
       }
     } catch (err) {
-      console.error('Error generating weekly digests:', err);
-      setNotification('Failed to generate weekly digests.');
+      console.error('Error generating weekly summaries:', err);
+      setNotification('Failed to generate weekly summaries.');
     } finally {
       setGenerating(false);
     }
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-8 max-w-[760px] mx-auto space-y-8 bg-white">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-4 pb-4 border-b border-[#e7e9ee]">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <FileText className="w-6 h-6 text-purple-400" />
-            Weekly Team Digests
-          </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Generate and review cross-meeting commitment summaries per owner with AI executive briefs.
+          <h1 className="text-[30px] font-bold text-[#0f1222] tracking-[-0.02em] leading-tight">
+            Weekly summaries
+          </h1>
+          <p className="text-[13px] text-[#5e6477] mt-0.5">
+            Cross-meeting commitment summaries per owner with executive briefs.
           </p>
         </div>
 
@@ -84,80 +78,76 @@ export default function DigestsView({ onNavigateToOutbox }) {
           {onNavigateToOutbox && (
             <button
               onClick={onNavigateToOutbox}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[13px] font-medium bg-white hover:bg-[#f7f8fa] text-[#0f1222] border border-[#e7e9ee] transition-colors"
             >
-              <Send className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Go to Outbox</span>
-              <ArrowRight className="w-3 h-3" />
+              <Send className="w-3.5 h-3.5 text-[#5e6477]" />
+              <span>Waiting for approval</span>
             </button>
           )}
 
           <button
             onClick={handleGenerateDigests}
             disabled={generating}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-900/30 transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-1.5 rounded-[6px] text-[13px] font-semibold bg-[#1e35c7] hover:bg-[#172aa3] text-white disabled:opacity-40 transition-colors"
           >
-            <Sparkles className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
-            <span>{generating ? 'Compiling Digests...' : 'Generate Weekly Digests'}</span>
+            <Sparkles className={`w-3.5 h-3.5 ${generating ? 'animate-spin' : ''}`} />
+            <span>{generating ? 'Compiling summaries...' : 'Generate weekly summaries'}</span>
           </button>
         </div>
       </div>
 
       {/* Notification Banner */}
       {notification && (
-        <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-800/60 text-xs text-purple-200 flex items-center justify-between gap-3 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
+        <div className="p-3.5 rounded-[6px] bg-[#f7f8fa] border border-[#e7e9ee] text-[13px] text-[#0f1222] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[#14795a] shrink-0" />
             <span>{notification}</span>
           </div>
           {onNavigateToOutbox && (
             <button
               onClick={onNavigateToOutbox}
-              className="px-3 py-1 rounded-lg bg-purple-800/80 hover:bg-purple-700 text-white font-semibold text-xs transition-colors shrink-0"
+              className="text-[#1e35c7] hover:underline font-medium text-[12px] shrink-0"
             >
-              Review Outbox
+              Review in outbox
             </button>
           )}
         </div>
       )}
 
-      {/* Newly Generated Digest Cards */}
+      {/* Newly Generated Digest Run */}
       {digestsData && digestsData.digests && digestsData.digests.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-            <span>Generated Digest Run (Week of {digestsData.week_start})</span>
+        <section className="space-y-4">
+          <div className="text-[14px] font-semibold text-[#0f1222]">
+            Generated run (Week of {digestsData.week_start})
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             {digestsData.digests.map((item, idx) => (
               <div
                 key={idx}
-                className="p-5 rounded-2xl bg-slate-900/70 border border-purple-900/40 hover:border-purple-800/60 transition-all space-y-4 shadow-sm"
+                className="p-5 rounded-[10px] bg-white border border-[#e7e9ee] space-y-3"
               >
                 {/* Person Header & Stats */}
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div className="flex items-center justify-between pb-3 border-b border-[#e7e9ee]">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-purple-950 text-purple-300 border border-purple-800 flex items-center justify-center font-bold text-xs">
-                      {item.owner.slice(0, 2).toUpperCase()}
-                    </div>
+                    <Avatar name={item.owner} size="md" />
                     <div>
-                      <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                      <h3 className="text-[15px] font-semibold text-[#0f1222]">
                         {item.owner}
                       </h3>
-                      <span className="text-[11px] text-slate-400">Team Member</span>
+                      <span className="text-[12px] text-[#8a90a2]">Team member</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 text-[10px] font-mono">
-                    <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                  <div className="flex items-center gap-2 text-[12px] tabular-nums">
+                    <span className="text-[#14795a] bg-[#eef8f3] px-2 py-0.5 rounded-[4px] border border-[#14795a]/30">
                       {item.stats?.done || 0} done
                     </span>
-                    <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">
+                    <span className="text-[#5e6477] bg-[#f7f8fa] px-2 py-0.5 rounded-[4px] border border-[#e7e9ee]">
                       {item.stats?.pending || 0} pending
                     </span>
                     {(item.stats?.overdue || 0) > 0 && (
-                      <span className="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800">
+                      <span className="text-[#d0272d] bg-[#fdf1f1] px-2 py-0.5 rounded-[4px] border border-[#d0272d]/30 font-medium">
                         {item.stats.overdue} overdue
                       </span>
                     )}
@@ -166,104 +156,62 @@ export default function DigestsView({ onNavigateToOutbox }) {
 
                 {/* AI Executive Summary */}
                 {item.summary && (
-                  <div className="text-xs text-slate-300 leading-relaxed bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                    <strong className="text-purple-300 block mb-1">Executive Summary:</strong>
+                  <div className="text-[13px] text-[#0f1222] leading-relaxed bg-[#f7f8fa] p-3 rounded-[6px]">
+                    <strong className="text-[#0f1222] block mb-1 text-[12px]">Executive summary:</strong>
                     {item.summary}
                   </div>
                 )}
 
                 {/* Highlights */}
                 {item.highlights && item.highlights.length > 0 && (
-                  <div className="space-y-1 text-xs">
-                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-                      Key Highlights:
+                  <div className="space-y-1 text-[13px]">
+                    <span className="text-[12px] font-medium text-[#5e6477] block">
+                      Key commitments:
                     </span>
-                    <ul className="space-y-1 text-slate-300">
+                    <ul className="list-disc pl-5 space-y-0.5 text-[#0f1222]">
                       {item.highlights.map((h, hIdx) => (
-                        <li key={hIdx} className="flex items-start gap-1.5">
-                          <span className="text-purple-400 mt-0.5">•</span>
-                          <span>{h}</span>
-                        </li>
+                        <li key={hIdx}>{h}</li>
                       ))}
                     </ul>
                   </div>
                 )}
-
-                {/* Full Body / Code-rendered Task Bullets */}
-                <div className="pt-2 border-t border-slate-800 text-[11px] font-mono text-slate-400 whitespace-pre-wrap max-h-48 overflow-y-auto bg-slate-950/40 p-2.5 rounded-xl">
-                  {item.body}
-                </div>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Existing Outbox Digest Items */}
-      <div className="space-y-4 pt-4">
-        <div className="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider">
-          <span className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-indigo-400" />
-            Saved Outbox Digests ({existingOutboxDigests.length})
-          </span>
-          {onNavigateToOutbox && existingOutboxDigests.length > 0 && (
-            <button
-              onClick={onNavigateToOutbox}
-              className="text-indigo-400 hover:text-indigo-300 normal-case font-semibold text-xs flex items-center gap-1"
-            >
-              <span>Manage in Outbox</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          )}
-        </div>
+      {/* Existing Outbox Digests Timeline */}
+      <section className="space-y-3">
+        <h2 className="text-[17px] font-semibold text-[#0f1222]">
+          Pending or sent summaries
+        </h2>
 
-        {existingOutboxDigests.length === 0 && !digestsData ? (
-          <div className="p-12 text-center rounded-2xl bg-slate-900/40 border border-slate-800/80">
-            <FileText className="w-10 h-10 text-purple-400/60 mx-auto mb-3" />
-            <h4 className="text-sm font-semibold text-white">No weekly digests generated yet</h4>
-            <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-              Click "Generate Weekly Digests" above to synthesize commitment reports for all active team members across recent meetings.
-            </p>
-          </div>
+        {existingOutboxDigests.length === 0 ? (
+          <p className="text-[13px] text-[#8a90a2] italic py-4">
+            No weekly summaries queued. Click "Generate weekly summaries" above to compile.
+          </p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="border-t border-b border-[#e7e9ee] divide-y divide-[#e7e9ee]">
             {existingOutboxDigests.map((item) => (
-              <div
-                key={item.id}
-                className="p-5 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-all space-y-3 shadow-sm"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <User className="w-3.5 h-3.5 text-purple-400" />
-                    <span className="text-sm font-bold text-white">@{item.recipient}</span>
+              <div key={item.id} className="py-3 flex items-start justify-between gap-4 text-[13px]">
+                <div className="space-y-1">
+                  <div className="font-semibold text-[#0f1222] flex items-center gap-2">
+                    <span>{item.title}</span>
+                    <StampBadge status={item.status} />
                   </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      item.status === 'sent'
-                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                        : item.status === 'pending'
-                        ? 'bg-amber-950 text-amber-300 border border-amber-800'
-                        : 'bg-slate-800 text-slate-400'
-                    }`}
-                  >
-                    {item.status.toUpperCase()}
-                  </span>
+                  <p className="text-[#5e6477] line-clamp-2 leading-relaxed">
+                    {item.body}
+                  </p>
                 </div>
-
-                <div className="text-xs font-semibold text-slate-200">{item.title}</div>
-
-                <div className="text-[11px] font-mono text-slate-300 whitespace-pre-wrap bg-slate-950/70 p-3 rounded-xl border border-slate-800 max-h-40 overflow-y-auto leading-relaxed">
-                  {item.body}
-                </div>
-
-                <div className="text-[10px] text-slate-500 font-mono">
-                  Dedupe: {item.dedupe_key}
+                <div className="text-[11px] text-[#8a90a2] shrink-0 tabular-nums">
+                  {new Date(item.created_at).toLocaleDateString()}
                 </div>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

@@ -1,17 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  MessageSquare,
   Send,
-  Sparkles,
   Quote,
-  X,
-  FileText,
-  Clock,
   RotateCcw,
   AlertCircle,
   HelpCircle,
 } from 'lucide-react';
-import TranscriptHighlighter from './TranscriptHighlighter';
+import TranscriptDrawer from '../ui/TranscriptDrawer';
 
 export default function AskNirnayView({ showToast }) {
   const [messages, setMessages] = useState([
@@ -25,7 +20,7 @@ export default function AskNirnayView({ showToast }) {
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [citationModal, setCitationModal] = useState(null); // { meetingId, quote, meetingTitle, transcript }
+  const [activeDrawer, setActiveDrawer] = useState(null); // { meetingTitle, meetingDate, transcript, highlightQuote }
   const [meetingsCache, setMeetingsCache] = useState({});
 
   const messagesEndRef = useRef(null);
@@ -34,7 +29,7 @@ export default function AskNirnayView({ showToast }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  // Load meetings to cache transcripts for citation modal
+  // Load meetings to cache transcripts for citation drawer
   useEffect(() => {
     fetch('/api/meetings')
       .then((res) => res.json())
@@ -116,48 +111,37 @@ export default function AskNirnayView({ showToast }) {
       } catch (e) {}
     }
 
-    setCitationModal({
-      meetingId: mId,
-      quote: cit.quote,
+    setActiveDrawer({
       meetingTitle: m ? m.title : `Meeting #${mId}`,
+      meetingDate: m?.meeting_date,
       transcript: m ? m.transcript : cit.quote,
+      highlightQuote: cit.quote,
     });
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] max-w-5xl mx-auto p-6 space-y-4">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] max-w-3xl mx-auto p-6 space-y-4 bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800 shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-amber-400 flex items-center justify-center shadow-lg shadow-indigo-900/30">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-              Ask Nirnay
-              <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800">
-                Grounded Memory
-              </span>
-            </h2>
-            <p className="text-xs text-slate-400">
-              Query cross-meeting commitments, superseded decisions, and timelines with verified transcript citations.
-            </p>
-          </div>
-        </div>
+      <div className="pb-4 border-b border-[#e7e9ee] shrink-0">
+        <h1 className="text-[22px] font-semibold text-[#0f1222]">
+          Ask Nirnay
+        </h1>
+        <p className="text-[13px] text-[#5e6477] mt-0.5">
+          Ask questions about past decisions, deadlines, owners, or timeline conflicts with verified transcript citations.
+        </p>
       </div>
 
-      {/* Suggested Questions Chips */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 shrink-0 scrollbar-none text-xs">
-        <span className="text-slate-500 font-medium shrink-0 flex items-center gap-1">
-          <HelpCircle className="w-3.5 h-3.5" />
-          Suggestions:
+      {/* Suggested Questions: Plain text links with underlines */}
+      <div className="flex items-center gap-3 overflow-x-auto pb-1 shrink-0 text-[13px] text-[#5e6477]">
+        <span className="shrink-0 flex items-center gap-1 font-medium text-[#8a90a2]">
+          <HelpCircle className="w-3.5 h-3.5" /> Suggestions:
         </span>
         {suggestedQuestions.map((sq, idx) => (
           <button
             key={idx}
             disabled={loading}
             onClick={() => handleSendMessage(sq)}
-            className="px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700 whitespace-nowrap transition-colors shrink-0 disabled:opacity-50 text-[11px]"
+            className="text-[#1e35c7] hover:underline whitespace-nowrap transition-colors shrink-0 disabled:opacity-50 text-[13px]"
           >
             {sq}
           </button>
@@ -165,39 +149,40 @@ export default function AskNirnayView({ showToast }) {
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+      <div className="flex-1 overflow-y-auto space-y-4 pr-1">
         {messages.map((msg, idx) => (
           <div
             key={idx}
             className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
           >
             <div
-              className={`max-w-2xl p-4 rounded-2xl text-xs leading-relaxed ${
+              className={`max-w-2xl p-4 rounded-[8px] text-[14px] leading-relaxed ${
                 msg.role === 'user'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950 font-medium'
-                  : 'bg-slate-900/80 border border-slate-800 text-slate-200'
+                  ? 'bg-[#f7f8fa] border border-[#e7e9ee] text-[#0f1222] font-medium'
+                  : 'bg-white border border-[#e7e9ee] text-[#0f1222]'
               }`}
             >
               <div className="whitespace-pre-wrap">{msg.content}</div>
 
               {/* Citations list under assistant message */}
               {msg.citations && msg.citations.length > 0 && (
-                <div className="mt-3 pt-2.5 border-t border-slate-800/80 space-y-1.5">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1">
+                <div className="mt-3 pt-2.5 border-t border-[#e7e9ee] space-y-2">
+                  <div className="text-[11px] font-semibold text-[#5e6477] flex items-center gap-1">
                     <Quote className="w-3 h-3" />
-                    <span>Verified Citations:</span>
+                    <span>Verified citations</span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-col gap-1.5">
                     {msg.citations.map((cit, cIdx) => (
                       <button
                         key={cIdx}
                         onClick={() => handleOpenCitation(cit)}
-                        className="px-2.5 py-1 rounded-lg bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-800/60 text-[11px] font-mono flex items-center gap-1.5 transition-colors text-left"
+                        className="p-2 rounded-[6px] bg-[#f7f8fa] hover:bg-[#eef1fd] border border-[#e7e9ee] text-[13px] flex flex-col items-start gap-0.5 transition-colors text-left group"
                         title="Click to view full transcript line"
                       >
-                        <span className="font-bold">Meeting {cit.meeting_id}</span>
-                        <span className="text-slate-500">•</span>
-                        <span className="truncate max-w-[240px]">"{cit.quote}"</span>
+                        <span className="font-semibold text-[#1e35c7] text-[11px] group-hover:underline">
+                          Meeting {cit.meeting_id}
+                        </span>
+                        <span className="font-serif italic text-[#0f1222]">"{cit.quote}"</span>
                       </button>
                     ))}
                   </div>
@@ -210,23 +195,22 @@ export default function AskNirnayView({ showToast }) {
         {/* Loading Indicator */}
         {loading && (
           <div className="flex items-start">
-            <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center gap-2 text-xs text-slate-400">
-              <Sparkles className="w-4 h-4 text-indigo-400 animate-spin" />
-              <span>Nirnay is searching meeting memory & verifying quotes...</span>
+            <div className="p-3.5 rounded-[8px] bg-[#f7f8fa] border border-[#e7e9ee] text-[13px] text-[#5e6477] animate-pulse">
+              Searching meeting memory and verifying citations...
             </div>
           </div>
         )}
 
         {/* Error Retry Banner */}
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-900/60 text-xs text-rose-300 flex items-center justify-between">
+          <div className="p-3 rounded-[6px] bg-[#fdf1f1] border border-[#d0272d]/30 text-[13px] text-[#d0272d] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{errorMsg}</span>
             </div>
             <button
               onClick={() => handleSendMessage()}
-              className="px-2.5 py-1 rounded bg-rose-900/60 hover:bg-rose-800 text-white font-semibold flex items-center gap-1"
+              className="px-2.5 py-1 rounded-[4px] bg-[#d0272d] hover:bg-[#b52026] text-white text-[12px] font-semibold flex items-center gap-1"
             >
               <RotateCcw className="w-3 h-3" />
               <span>Retry</span>
@@ -238,7 +222,7 @@ export default function AskNirnayView({ showToast }) {
       </div>
 
       {/* Input Box Footer */}
-      <div className="pt-2 border-t border-slate-800 shrink-0">
+      <div className="pt-2 border-t border-[#e7e9ee] shrink-0">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -252,53 +236,29 @@ export default function AskNirnayView({ showToast }) {
             onChange={(e) => setInputValue(e.target.value)}
             disabled={loading}
             placeholder="Ask about decisions, deadlines, owners, or timeline conflicts..."
-            className="flex-1 px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+            className="flex-1 px-3.5 py-2.5 bg-white border border-[#cdd1da] rounded-[6px] text-[14px] text-[#0f1222] placeholder-[#8a90a2] focus:border-[#1e35c7] focus:outline-none transition-colors"
           />
           <button
             type="submit"
             disabled={loading || !inputValue.trim()}
-            className="px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold shadow-lg shadow-indigo-900/40 transition-all flex items-center gap-1.5"
+            className="px-4 py-2.5 rounded-[6px] bg-[#1e35c7] hover:bg-[#172aa3] disabled:opacity-40 text-white text-[13px] font-semibold transition-colors flex items-center gap-1.5"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-3.5 h-3.5" />
             <span>Send</span>
           </button>
         </form>
       </div>
 
-      {/* Citation Modal with TranscriptHighlighter */}
-      {citationModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
-                  SOURCE TRANSCRIPT VERIFICATION
-                </span>
-                <h3 className="text-sm font-bold text-white mt-0.5">
-                  {citationModal.meetingTitle}
-                </h3>
-              </div>
-              <button
-                onClick={() => setCitationModal(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-4 bg-indigo-950/20 border-b border-slate-800 text-xs text-indigo-200 flex items-center gap-2">
-              <Quote className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-              <span className="font-serif italic">Highlighted quote: "{citationModal.quote}"</span>
-            </div>
-
-            <div className="p-5 flex-1 overflow-y-auto">
-              <TranscriptHighlighter
-                transcript={citationModal.transcript}
-                highlightQuote={citationModal.quote}
-              />
-            </div>
-          </div>
-        </div>
+      {/* Slide-over Transcript Drawer */}
+      {activeDrawer && (
+        <TranscriptDrawer
+          isOpen={true}
+          onClose={() => setActiveDrawer(null)}
+          meetingTitle={activeDrawer.meetingTitle}
+          meetingDate={activeDrawer.meetingDate}
+          transcript={activeDrawer.transcript}
+          highlightQuote={activeDrawer.highlightQuote}
+        />
       )}
     </div>
   );

@@ -1,9 +1,8 @@
 import React from 'react';
-import { Quote } from 'lucide-react';
 
 /**
- * QuoteBlock - editorial quote block rendered in serif italic style
- * Clicking activates the quote span in the transcript drawer.
+ * QuoteBlock - what PEOPLE said, rendered in Newsreader serif.
+ * The yellow highlighter is used on evidence citation.
  */
 export default function QuoteBlock({
   quote,
@@ -18,17 +17,17 @@ export default function QuoteBlock({
   return (
     <div
       onClick={onClick}
-      className={`group border-l-2 border-stone-300 pl-3 py-1 my-1.5 transition-colors ${
-        onClick ? 'cursor-pointer hover:border-indigo-600 hover:bg-stone-50/60 rounded-r' : ''
+      className={`border-l-2 border-[#cdd1da] pl-3 py-1 my-1.5 transition-colors ${
+        onClick ? 'cursor-pointer hover:border-[#1e35c7] hover:bg-[#f7f8fa] rounded-r' : ''
       } ${className}`}
       title={onClick ? 'Click to inspect in transcript' : undefined}
     >
-      <p className="font-serif italic text-stone-800 text-sm leading-relaxed">
+      <p className="font-serif italic text-[#0f1222] text-[15px] leading-relaxed">
         "{quote}"
       </p>
       {(speaker || meetingTitle) && (
-        <div className="flex items-center gap-2 mt-1 text-xs text-stone-500 font-sans">
-          {speaker && <span className="font-medium text-stone-700">— {speaker}</span>}
+        <div className="flex items-center gap-2 mt-1 text-[13px] text-[#5e6477] font-sans">
+          {speaker && <span className="font-medium text-[#0f1222]">— {speaker}</span>}
           {meetingTitle && (
             <span>
               in {meetingTitle}
@@ -36,8 +35,8 @@ export default function QuoteBlock({
             </span>
           )}
           {onClick && (
-            <span className="text-indigo-600 underline text-[11px] opacity-0 group-hover:opacity-100 transition-opacity">
-              View transcript
+            <span className="text-[#1e35c7] text-[12px] hover:underline ml-1">
+              View in transcript
             </span>
           )}
         </div>

@@ -4,15 +4,11 @@ import {
   Play,
   RotateCw,
   CheckCircle2,
-  XCircle,
   AlertCircle,
-  HelpCircle,
-  Clock,
-  Sparkles,
-  ChevronDown,
-  ChevronUp,
   FileDown,
   Info,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 export default function AccuracyView({ showToast }) {
@@ -45,7 +41,7 @@ export default function AccuracyView({ showToast }) {
         setEvalJob(status);
         if (status.state === 'done') {
           if (status.result) setEvalData(status.result);
-          if (showToast) showToast('Evaluation completed successfully!', 'success');
+          if (showToast) showToast('Evaluation completed successfully.', 'success');
         } else if (status.state === 'error') {
           if (showToast) showToast(`Evaluation error: ${status.error}`, 'error');
         }
@@ -68,9 +64,9 @@ export default function AccuracyView({ showToast }) {
           setEvalJob(status);
           if (status.state === 'done') {
             if (status.result) setEvalData(status.result);
-            if (showToast) showToast('Live evaluation finished!', 'success');
+            if (showToast) showToast('Live evaluation finished.', 'success');
           } else if (status.state === 'error') {
-            if (showToast) showToast(`Eval failed: ${status.error}`, 'error');
+            if (showToast) showToast(`Evaluation failed: ${status.error}`, 'error');
           }
         })
         .catch(() => {});
@@ -117,23 +113,17 @@ export default function AccuracyView({ showToast }) {
   const isRunning = evalJob.state === 'running';
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-8 max-w-[1200px] mx-auto space-y-8 bg-white">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-4 pb-4 border-b border-[#e7e9ee]">
         <div>
-          <div className="flex items-center gap-2">
-            <Award className="w-6 h-6 text-amber-400" />
-            <h2 className="text-2xl font-bold tracking-tight text-white">
-              Pipeline Accuracy Scoreboard
-            </h2>
-            {evalData?.snapshot && (
-              <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-indigo-950 text-indigo-300 border border-indigo-800">
-                Snapshot ({new Date(evalData.evaluated_at).toLocaleDateString()})
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-slate-400 mt-1">
-            Honest, automated evaluation of Nirnay's extraction, memory, and conflict detection against hand-annotated ground truth.
+          <h1 className="text-[30px] font-bold text-[#0f1222] tracking-[-0.02em] leading-tight">
+            How accurate is Nirnay?
+          </h1>
+          <p className="text-[15px] text-[#5e6477] mt-1">
+            {summary
+              ? `Across 3 test meetings Nirnay found ${summary.overall_recall}% of what it should have.`
+              : 'Automated evaluation against hand-annotated ground truth.'}
           </p>
         </div>
 
@@ -143,125 +133,138 @@ export default function AccuracyView({ showToast }) {
             <button
               onClick={handleExportSnapshot}
               disabled={exporting || isRunning}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[13px] font-medium bg-white hover:bg-[#f7f8fa] text-[#0f1222] border border-[#e7e9ee] transition-colors"
               title="Save current results as default snapshot"
             >
-              <FileDown className="w-3.5 h-3.5 text-indigo-400" />
-              <span>{exporting ? 'Saving...' : 'Export Snapshot'}</span>
+              <FileDown className="w-3.5 h-3.5 text-[#5e6477]" />
+              <span>{exporting ? 'Saving...' : 'Export snapshot'}</span>
             </button>
           )}
 
           <button
             onClick={handleRunEvaluation}
             disabled={isRunning}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-950/40 transition-all disabled:opacity-50"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-[6px] text-[13px] font-semibold bg-[#1e35c7] hover:bg-[#172aa3] text-white disabled:opacity-40 transition-colors"
           >
             <Play className={`w-3.5 h-3.5 fill-current ${isRunning ? 'animate-spin' : ''}`} />
-            <span>{isRunning ? 'Evaluating...' : 'Run Evaluation (3 AI Calls)'}</span>
+            <span>{isRunning ? 'Evaluating...' : 'Run evaluation'}</span>
           </button>
         </div>
       </div>
 
       {/* Progress Box while running */}
       {isRunning && (
-        <div className="p-5 rounded-2xl bg-amber-950/30 border border-amber-800/60 text-xs text-amber-200 flex items-center gap-3 shadow-lg animate-pulse">
-          <RotateCw className="w-5 h-5 text-amber-400 animate-spin shrink-0" />
+        <div className="p-4 rounded-[6px] bg-[#f7f8fa] border border-[#1e35c7] text-[13px] text-[#0f1222] flex items-center gap-3">
+          <RotateCw className="w-4 h-4 text-[#1e35c7] animate-spin shrink-0" />
           <div className="flex-1">
-            <strong className="block text-white text-sm font-semibold">Evaluation in Progress</strong>
-            <p className="text-amber-300/90 font-mono mt-0.5">{evalJob.progress || 'Processing seed meetings...'}</p>
+            <span className="font-semibold text-[#0f1222]">Evaluation in progress:</span>{' '}
+            <span className="text-[#5e6477] tabular-nums">{evalJob.progress || 'Processing seed meetings...'}</span>
           </div>
         </div>
       )}
 
-      {/* Honest Benchmark Disclaimer Banner */}
-      <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-start gap-3 text-xs text-slate-300">
-        <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-        <div>
-          <strong className="text-white block font-semibold mb-0.5">Evaluation Scope & Integrity:</strong>
-          <p className="leading-relaxed text-slate-400">
-            Measured on 3 demo meetings we wrote ourselves: a small test set, not a general benchmark. The evaluation sandbox initializes an isolated in-memory SQLite database, executes live LLM extraction for each transcript, applies previous context, and strictly checks decisions, tasks, status updates, exact quote matches, and conflict detection.
-          </p>
+      {/* Visible Note: Hand-annotated demo meetings */}
+      <div className="p-3.5 rounded-[6px] bg-[#f7f8fa] border border-[#e7e9ee] text-[13px] text-[#5e6477] flex items-start gap-2.5">
+        <Info className="w-4 h-4 text-[#5e6477] shrink-0 mt-0.5" />
+        <div className="leading-relaxed">
+          <strong className="text-[#0f1222]">Note on test set:</strong> This evaluation measures the pipeline against 3 demo meetings we authored ourselves with hand-annotated expected decisions, tasks, deadline changes, and conflicts. The test runs in an isolated in-memory SQLite sandbox with live LLM extraction.
         </div>
       </div>
 
-      {/* Big KPI Cards */}
+      {/* Clean Tabular View */}
       {summary ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          {/* Overall Recall */}
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950/60 to-slate-900 border border-indigo-800/60 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider">Overall Recall</span>
-            <div className="text-2xl font-black text-white font-mono">{summary.overall_recall}%</div>
-            <p className="text-[10px] text-slate-400">Across all 4 categories</p>
-          </div>
-
-          {/* Decisions */}
-          <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider">Decisions</span>
-            <div className="text-xl font-black text-white font-mono">{summary.decisions.recall}%</div>
-            <div className="text-[10px] text-slate-400 flex items-center justify-between font-mono">
-              <span>P: {summary.decisions.precision}%</span>
-              <span>{summary.decisions.correct}/{summary.decisions.expected}</span>
-            </div>
-          </div>
-
-          {/* Tasks */}
-          <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">New Tasks</span>
-            <div className="text-xl font-black text-white font-mono">{summary.tasks.recall}%</div>
-            <div className="text-[10px] text-slate-400 flex items-center justify-between font-mono">
-              <span>P: {summary.tasks.precision}%</span>
-              <span>{summary.tasks.correct}/{summary.tasks.expected}</span>
-            </div>
-          </div>
-
-          {/* Task Updates */}
-          <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider">Task Updates</span>
-            <div className="text-xl font-black text-white font-mono">{summary.task_updates.recall}%</div>
-            <div className="text-[10px] text-slate-400 flex items-center justify-between font-mono">
-              <span>P: {summary.task_updates.precision}%</span>
-              <span>{summary.task_updates.correct}/{summary.task_updates.expected}</span>
-            </div>
-          </div>
-
-          {/* Conflicts */}
-          <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-rose-400 tracking-wider">Conflicts</span>
-            <div className="text-xl font-black text-white font-mono">{summary.conflicts.recall}%</div>
-            <div className="text-[10px] text-slate-400 flex items-center justify-between font-mono">
-              <span>P: {summary.conflicts.precision}%</span>
-              <span>{summary.conflicts.correct}/{summary.conflicts.expected}</span>
-            </div>
-          </div>
-
-          {/* Evidence Validity */}
-          <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-cyan-400 tracking-wider">Quote Validity</span>
-            <div className="text-xl font-black text-white font-mono">{summary.evidence_validity}%</div>
-            <p className="text-[10px] text-slate-400">Verbatim quote match</p>
-          </div>
-
-          {/* Clarification No-Guess */}
-          <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-purple-400 tracking-wider">No-Guess Rate</span>
-            <div className="text-xl font-black text-white font-mono">{summary.no_guess_rate}%</div>
-            <p className="text-[10px] text-slate-400">Owner left unassigned</p>
-          </div>
+        <div className="border border-[#e7e9ee] rounded-[8px] overflow-hidden bg-white">
+          <table className="w-full text-left text-[14px]">
+            <thead className="bg-[#f7f8fa] text-[12px] font-medium text-[#5e6477] border-b border-[#e7e9ee]">
+              <tr>
+                <th className="py-2.5 px-4 font-medium">Category</th>
+                <th className="py-2.5 px-4 font-medium tabular-nums">Found / Expected</th>
+                <th className="py-2.5 px-4 font-medium tabular-nums">Recall</th>
+                <th className="py-2.5 px-4 font-medium tabular-nums">Precision</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#e7e9ee]">
+              <tr>
+                <td className="py-3 px-4 font-semibold text-[#0f1222]">Decisions</td>
+                <td className="py-3 px-4 text-[#5e6477] tabular-nums">
+                  {summary.decisions.correct} / {summary.decisions.expected}
+                </td>
+                <td className="py-3 px-4 font-medium text-[#0f1222] tabular-nums">
+                  {summary.decisions.recall}%
+                </td>
+                <td className="py-3 px-4 text-[#5e6477] tabular-nums">
+                  {summary.decisions.precision}%
+                </td>
+              </tr>
+              <tr>
+                <td className="py-3 px-4 font-semibold text-[#0f1222]">New tasks</td>
+                <td className="py-3 px-4 text-[#5e6477] tabular-nums">
+                  {summary.tasks.correct} / {summary.tasks.expected}
+                </td>
+                <td className="py-3 px-4 font-medium text-[#0f1222] tabular-nums">
+                  {summary.tasks.recall}%
+                </td>
+                <td className="py-3 px-4 text-[#5e6477] tabular-nums">
+                  {summary.tasks.precision}%
+                </td>
+              </tr>
+              <tr>
+                <td className="py-3 px-4 font-semibold text-[#0f1222]">Task updates</td>
+                <td className="py-3 px-4 text-[#5e6477] tabular-nums">
+                  {summary.task_updates.correct} / {summary.task_updates.expected}
+                </td>
+                <td className="py-3 px-4 font-medium text-[#0f1222] tabular-nums">
+                  {summary.task_updates.recall}%
+                </td>
+                <td className="py-3 px-4 text-[#5e6477] tabular-nums">
+                  {summary.task_updates.precision}%
+                </td>
+              </tr>
+              <tr>
+                <td className="py-3 px-4 font-semibold text-[#0f1222]">Conflicts</td>
+                <td className="py-3 px-4 text-[#5e6477] tabular-nums">
+                  {summary.conflicts.correct} / {summary.conflicts.expected}
+                </td>
+                <td className="py-3 px-4 font-medium text-[#0f1222] tabular-nums">
+                  {summary.conflicts.recall}%
+                </td>
+                <td className="py-3 px-4 text-[#5e6477] tabular-nums">
+                  {summary.conflicts.precision}%
+                </td>
+              </tr>
+              <tr>
+                <td className="py-3 px-4 font-semibold text-[#0f1222]">Quotes verified verbatim</td>
+                <td className="py-3 px-4 text-[#5e6477] tabular-nums">—</td>
+                <td className="py-3 px-4 font-medium text-[#14795a] tabular-nums">
+                  {summary.evidence_validity}%
+                </td>
+                <td className="py-3 px-4 text-[#5e6477] tabular-nums">—</td>
+              </tr>
+              <tr>
+                <td className="py-3 px-4 font-semibold text-[#0f1222]">Owners not guessed (unassigned)</td>
+                <td className="py-3 px-4 text-[#5e6477] tabular-nums">—</td>
+                <td className="py-3 px-4 font-medium text-[#14795a] tabular-nums">
+                  {summary.no_guess_rate}%
+                </td>
+                <td className="py-3 px-4 text-[#5e6477] tabular-nums">—</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       ) : (
-        <div className="py-12 text-center text-slate-400 text-xs">
-          Loading evaluation metrics...
+        <div className="py-12 text-center text-[#8a90a2] text-[14px]">
+          {loading ? 'Loading evaluation metrics...' : 'No evaluation data recorded. Click "Run evaluation" above.'}
         </div>
       )}
 
       {/* Per-Meeting Breakdown */}
       {evalData?.meetings && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <span>Per-Meeting Test Results</span>
-          </h3>
+        <section className="space-y-4">
+          <h2 className="text-[17px] font-semibold text-[#0f1222]">
+            Per-meeting results
+          </h2>
 
-          <div className="space-y-3">
+          <div className="border-t border-b border-[#e7e9ee] divide-y divide-[#e7e9ee]">
             {evalData.meetings.map((m) => {
               const isExpanded = expandedMeeting === m.meeting_id;
               const hasMissed =
@@ -276,129 +279,104 @@ export default function AccuracyView({ showToast }) {
                 m.conflicts?.extra?.length > 0;
 
               return (
-                <div
-                  key={m.meeting_id}
-                  className="rounded-2xl bg-slate-900/60 border border-slate-800 overflow-hidden transition-all"
-                >
-                  {/* Meeting Row Bar */}
+                <div key={m.meeting_id} className="py-3 space-y-2">
                   <div
                     onClick={() => setExpandedMeeting(isExpanded ? null : m.meeting_id)}
-                    className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer hover:bg-slate-800/40 transition-colors"
+                    className="flex flex-col md:flex-row md:items-baseline justify-between gap-3 cursor-pointer group"
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-white text-sm">{m.title}</span>
-                        <span className="text-xs text-slate-500 font-mono">({m.meeting_date})</span>
+                        <span className="font-semibold text-[#0f1222] text-[15px] group-hover:text-[#1e35c7]">
+                          {m.title}
+                        </span>
+                        <span className="text-[12px] text-[#8a90a2] tabular-nums">
+                          ({m.meeting_date})
+                        </span>
                       </div>
-                      <div className="flex items-center gap-4 text-xs text-slate-400 mt-2 flex-wrap">
-                        <span className="flex items-center gap-1.5">
-                          <span className="text-slate-500">Decisions:</span>
-                          <span className="font-mono text-white font-semibold">
-                            {m.decisions.correct}/{m.decisions.expected}
-                          </span>
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="text-slate-500">Tasks:</span>
-                          <span className="font-mono text-white font-semibold">
-                            {m.tasks.correct}/{m.tasks.expected}
-                          </span>
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="text-slate-500">Updates:</span>
-                          <span className="font-mono text-white font-semibold">
-                            {m.task_updates.correct}/{m.task_updates.expected}
-                          </span>
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="text-slate-500">Conflicts:</span>
-                          <span className="font-mono text-white font-semibold">
-                            {m.conflicts.correct}/{m.conflicts.expected}
-                          </span>
-                        </span>
+                      <div className="flex items-center gap-4 text-[13px] text-[#5e6477] mt-1 flex-wrap tabular-nums">
+                        <span>Decisions: {m.decisions.correct}/{m.decisions.expected}</span>
+                        <span>·</span>
+                        <span>Tasks: {m.tasks.correct}/{m.tasks.expected}</span>
+                        <span>·</span>
+                        <span>Updates: {m.task_updates.correct}/{m.task_updates.expected}</span>
+                        <span>·</span>
+                        <span>Conflicts: {m.conflicts.correct}/{m.conflicts.expected}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 shrink-0">
                       {!hasMissed && !hasExtra ? (
-                        <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>100% Match</span>
+                        <span className="text-[12px] font-medium text-[#14795a] bg-[#eef8f3] px-2 py-0.5 rounded-[4px] border border-[#14795a]/30">
+                          100% Match
                         </span>
                       ) : (
-                        <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-950 text-amber-300 border border-amber-800 flex items-center gap-1.5">
-                          <AlertCircle className="w-3.5 h-3.5" />
-                          <span>Discrepancies</span>
+                        <span className="text-[12px] font-medium text-[#b26b00] bg-[#fff6e5] px-2 py-0.5 rounded-[4px] border border-[#b26b00]/30">
+                          Discrepancies
                         </span>
                       )}
                       {isExpanded ? (
-                        <ChevronUp className="w-4 h-4 text-slate-400" />
+                        <ChevronUp className="w-4 h-4 text-[#8a90a2]" />
                       ) : (
-                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                        <ChevronDown className="w-4 h-4 text-[#8a90a2]" />
                       )}
                     </div>
                   </div>
 
-                  {/* Expanded Missed & Extra details */}
                   {isExpanded && (
-                    <div className="p-5 border-t border-slate-800/80 bg-slate-950/50 space-y-4 text-xs">
-                      {/* Missed Items */}
+                    <div className="p-4 rounded-[6px] bg-[#f7f8fa] border border-[#e7e9ee] space-y-3 text-[13px] mt-2">
+                      {/* Missed items formatted as sentences */}
                       <div>
-                        <h4 className="font-bold text-rose-400 uppercase tracking-wider text-[11px] mb-2 flex items-center gap-1.5">
-                          <XCircle className="w-3.5 h-3.5" />
-                          <span>Missed Items (Expected but not found)</span>
-                        </h4>
+                        <div className="font-semibold text-[#d0272d] text-[12px] mb-1">
+                          Missed items
+                        </div>
                         {!hasMissed ? (
-                          <p className="text-slate-500 italic">None. All expected items were captured.</p>
+                          <p className="text-[#5e6477] italic">None. All expected items were captured.</p>
                         ) : (
-                          <div className="space-y-1.5">
+                          <ul className="list-disc pl-5 space-y-1 text-[#0f1222]">
                             {m.decisions?.missed?.map((d, i) => (
-                              <div key={i} className="p-2 rounded bg-rose-950/30 border border-rose-900/40 text-slate-300">
-                                <strong className="text-rose-300">[Decision]</strong> {d.topic}: "{d.value}" - {d.text}
-                              </div>
+                              <li key={i}>
+                                Expected decision on {d.topic} with value "{d.value}".
+                              </li>
                             ))}
                             {m.tasks?.missed?.map((t, i) => (
-                              <div key={i} className="p-2 rounded bg-rose-950/30 border border-rose-900/40 text-slate-300">
-                                <strong className="text-rose-300">[Task]</strong> {t.title} (@{t.owner || 'Unassigned'}, due: {t.deadline || 'None'})
-                              </div>
+                              <li key={i}>
+                                Expected task "{t.title}" assigned to {t.owner || 'Unassigned'}.
+                              </li>
                             ))}
                             {m.task_updates?.missed?.map((u, i) => (
-                              <div key={i} className="p-2 rounded bg-rose-950/30 border border-rose-900/40 text-slate-300">
-                                <strong className="text-rose-300">[Update]</strong> {u.title_keyword} -&gt; status: {u.new_status}, deadline: {u.new_deadline}
-                              </div>
+                              <li key={i}>
+                                Expected update to {u.title_keyword}: status {u.new_status}, deadline {u.new_deadline}.
+                              </li>
                             ))}
                             {m.conflicts?.missed?.map((c, i) => (
-                              <div key={i} className="p-2 rounded bg-rose-950/30 border border-rose-900/40 text-slate-300">
-                                <strong className="text-rose-300">[Conflict]</strong> {c.type}: {c.description}
-                              </div>
+                              <li key={i}>
+                                Expected {c.type}: {c.description}.
+                              </li>
                             ))}
-                          </div>
+                          </ul>
                         )}
                       </div>
 
-                      {/* Extra Items */}
+                      {/* Extra items formatted as sentences */}
                       <div>
-                        <h4 className="font-bold text-amber-400 uppercase tracking-wider text-[11px] mb-2 flex items-center gap-1.5">
-                          <AlertCircle className="w-3.5 h-3.5" />
-                          <span>Extra Items (Found but unmapped)</span>
-                        </h4>
+                        <div className="font-semibold text-[#b26b00] text-[12px] mb-1">
+                          Extra unmapped items
+                        </div>
                         {!hasExtra ? (
-                          <p className="text-slate-500 italic">None. No extraneous items produced.</p>
+                          <p className="text-[#5e6477] italic">None. No extra items were found.</p>
                         ) : (
-                          <div className="space-y-1.5">
+                          <ul className="list-disc pl-5 space-y-1 text-[#0f1222]">
                             {m.tasks?.extra?.map((t, i) => (
-                              <div key={i} className="p-2 rounded bg-amber-950/20 border border-amber-900/40 text-slate-300">
-                                <strong className="text-amber-300">[Task]</strong> {t.title} (@{t.owner || 'Unassigned'})
-                              </div>
+                              <li key={i}>
+                                Extracted task "{t.title}" for {t.owner || 'Unassigned'}.
+                              </li>
                             ))}
                             {m.decisions?.extra?.map((d, i) => (
-                              <div key={i} className="p-2 rounded bg-amber-950/20 border border-amber-900/40 text-slate-300">
-                                <strong className="text-amber-300">[Decision]</strong> {d.topic}: "{d.value}"
-                              </div>
+                              <li key={i}>
+                                Extracted decision on {d.topic} with value "{d.value}".
+                              </li>
                             ))}
-                          </div>
+                          </ul>
                         )}
                       </div>
                     </div>
@@ -407,7 +385,7 @@ export default function AccuracyView({ showToast }) {
               );
             })}
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

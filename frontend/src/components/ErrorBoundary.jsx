@@ -1,55 +1,53 @@
 import React from 'react';
 
-export default class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
-  }
+export default function ErrorBoundary({ children }) {
+  const [hasError, setHasError] = React.useState(false);
+  const [error, setError] = React.useState(null);
 
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
+  React.useEffect(() => {
+    const errorHandler = (event) => {
+      console.error('Unhandled UI error:', event.error);
+      setHasError(true);
+      setError(event.error);
+    };
+    window.addEventListener('error', errorHandler);
+    return () => window.removeEventListener('error', errorHandler);
+  }, []);
 
-  componentDidCatch(error, errorInfo) {
-    console.error('Unhandled UI Error caught by Nirnay ErrorBoundary:', error, errorInfo);
-    this.setState({ errorInfo });
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen bg-[#0b0f17] text-slate-100 flex flex-col items-center justify-center p-6 font-sans">
-          <div className="max-w-xl w-full bg-slate-900 border border-rose-800/80 rounded-2xl p-8 shadow-2xl space-y-4">
-            <h2 className="text-xl font-bold text-rose-400">
-              Nirnay Application Error
-            </h2>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              A client-side JavaScript error occurred while rendering the interface. This can occur if outdated scripts are cached in your browser.
-            </p>
-            <pre className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-rose-300 overflow-x-auto whitespace-pre-wrap">
-              {this.state.error?.toString()}
-            </pre>
-            <div className="pt-2 flex gap-3">
-              <button
-                onClick={() => {
-                  if (typeof localStorage !== 'undefined') localStorage.clear();
-                  window.location.reload(true);
-                }}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md"
-              >
-                Clear Cache & Reload
-              </button>
-              <button
-                onClick={() => window.location.href = '/'}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 transition-all"
-              >
-                Go to Home
-              </button>
-            </div>
+  if (hasError) {
+    return (
+      <div className="min-h-screen bg-white text-[#0f1222] flex flex-col items-center justify-center p-6 font-sans">
+        <div className="max-w-xl w-full bg-white border border-[#d0272d]/40 rounded-[10px] p-8 shadow-elevated space-y-4">
+          <h2 className="text-[20px] font-bold text-[#d0272d]">
+            Application error
+          </h2>
+          <p className="text-[14px] text-[#5e6477] leading-relaxed">
+            A client-side error occurred. Clearing local browser cache may resolve this.
+          </p>
+          <pre className="bg-[#f7f8fa] border border-[#e7e9ee] rounded-[6px] p-3 text-[12px] text-[#d0272d] overflow-x-auto whitespace-pre-wrap font-mono">
+            {error?.toString() || 'Unknown error'}
+          </pre>
+          <div className="pt-2 flex gap-3">
+            <button
+              onClick={() => {
+                if (typeof localStorage !== 'undefined') localStorage.clear();
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-[#1e35c7] hover:bg-[#172aa3] text-white rounded-[6px] text-[13px] font-semibold transition-colors"
+            >
+              Clear cache & reload
+            </button>
+            <button
+              onClick={() => (window.location.href = '/')}
+              className="px-4 py-2 bg-white hover:bg-[#f7f8fa] text-[#0f1222] rounded-[6px] text-[13px] font-medium border border-[#e7e9ee] transition-colors"
+            >
+              Go to Today
+            </button>
           </div>
         </div>
-      );
-    }
-    return this.props.children;
+      </div>
+    );
   }
+
+  return children;
 }

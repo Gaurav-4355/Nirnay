@@ -527,7 +527,7 @@ export default function TasksView({ showToast }) {
                               href={task.trello_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5"
+                              className="text-[#1e35c7] hover:text-[#172aa3] flex items-center gap-0.5"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <span>Trello</span>
@@ -641,7 +641,7 @@ export default function TasksView({ showToast }) {
                       href={task.trello_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-indigo-600 hover:text-indigo-800 text-xs inline-flex items-center gap-0.5"
+                      className="text-[#1e35c7] hover:text-[#172aa3] text-xs inline-flex items-center gap-0.5"
                     >
                       <span>Trello</span>
                       <ExternalLink className="w-2.5 h-2.5" />

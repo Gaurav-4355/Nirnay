@@ -13,23 +13,23 @@ export default function ToastContainer({ toasts, onDismiss }) {
         return (
           <div
             key={toast.id}
-            className={`pointer-events-auto p-4 rounded-2xl border shadow-xl flex items-start justify-between gap-3 text-xs backdrop-blur-md transition-all animate-in slide-in-from-bottom-2 ${
+            className={`pointer-events-auto p-3.5 rounded-[8px] border shadow-elevated flex items-start justify-between gap-3 text-[13px] transition-all bg-white ${
               isSuccess
-                ? 'bg-slate-900/95 border-emerald-700/80 text-emerald-200'
+                ? 'border-[#14795a]/40 text-[#14795a]'
                 : isError
-                ? 'bg-slate-900/95 border-rose-700/80 text-rose-200'
-                : 'bg-slate-900/95 border-indigo-700/80 text-indigo-200'
+                ? 'border-[#d0272d]/40 text-[#d0272d]'
+                : 'border-[#1e35c7]/40 text-[#0f1222]'
             }`}
           >
             <div className="flex items-start gap-2.5">
-              {isSuccess && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />}
-              {isError && <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />}
-              {!isSuccess && !isError && <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />}
-              <span className="leading-relaxed font-medium">{toast.message}</span>
+              {isSuccess && <CheckCircle2 className="w-4 h-4 text-[#14795a] shrink-0 mt-0.5" />}
+              {isError && <AlertCircle className="w-4 h-4 text-[#d0272d] shrink-0 mt-0.5" />}
+              {!isSuccess && !isError && <Info className="w-4 h-4 text-[#1e35c7] shrink-0 mt-0.5" />}
+              <span className="leading-snug font-medium text-[#0f1222]">{toast.message}</span>
             </div>
             <button
               onClick={() => onDismiss(toast.id)}
-              className="text-slate-400 hover:text-white p-0.5 rounded shrink-0"
+              className="text-[#8a90a2] hover:text-[#0f1222] p-0.5 rounded shrink-0"
             >
               <X className="w-3.5 h-3.5" />
             </button>

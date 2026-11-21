@@ -1,26 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  Sparkles,
   Upload,
   Calendar,
   AlertTriangle,
   CheckCircle2,
   Quote,
-  ArrowRight,
-  RefreshCw,
-  HelpCircle,
-  FileText,
-  UserCheck,
-  Shuffle,
-  Users,
-  GitBranch,
-  ShieldAlert,
-  Check,
   Clock,
+  ArrowRight,
+  RotateCcw,
+  Plus,
+  Send,
+  Compass,
+  CheckSquare,
 } from 'lucide-react';
 import TranscriptHighlighter from './TranscriptHighlighter';
+import ConfidenceMark from '../ui/ConfidenceMark';
+import Avatar from '../ui/Avatar';
+import RedPenStrike from '../ui/RedPenStrike';
+import StampBadge from '../ui/StampBadge';
 
-export default function NewMeetingView({ onMeetingSaved }) {
+export default function NewMeetingView({ onMeetingSaved, showToast }) {
+  const [step, setStep] = useState('paste'); // 'paste' | 'review' | 'saved'
   const [title, setTitle] = useState('');
   const [meetingDate, setMeetingDate] = useState(
     new Date().toISOString().split('T')[0]
@@ -31,29 +31,23 @@ export default function NewMeetingView({ onMeetingSaved }) {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
 
   // Proposal state
   const [proposal, setProposal] = useState(null);
   const [activeQuote, setActiveQuote] = useState(null);
-  const [analyzeTime, setAnalyzeTime] = useState(null);
-  const [modelName, setModelName] = useState('Groq');
 
-  // Conflict resolutions state: mapped by conflict index: "kept_new" | "kept_old" | "acknowledged"
+  // Conflict resolutions: mapped by conflict index: "kept_new" | "kept_old" | "acknowledged"
   const [conflictChoices, setConflictChoices] = useState({});
 
   // Task updates toggles: mapped by task_id -> boolean
   const [taskUpdatesIncluded, setTaskUpdatesIncluded] = useState({});
 
-  useEffect(() => {
-    fetch('/api/health')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.model) setModelName(data.model);
-      })
-      .catch(() => {});
-  }, []);
+  // Saved result summary state
+  const [savedSummary, setSavedSummary] = useState(null);
+
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetch('/api/seed/demo-meetings')
@@ -62,8 +56,21 @@ export default function NewMeetingView({ onMeetingSaved }) {
       .catch((err) => console.error('Error fetching demo meetings:', err));
   }, []);
 
-  const handleSelectDemo = (e) => {
-    const demoId = e.target.value;
+  // Timer for real elapsed seconds while analyzing
+  useEffect(() => {
+    let interval = null;
+    if (loading) {
+      setElapsedSeconds(0);
+      interval = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  const handleSelectDemo = (demoId) => {
     setSelectedDemoId(demoId);
     if (!demoId) return;
 
@@ -95,16 +102,15 @@ export default function NewMeetingView({ onMeetingSaved }) {
 
   const handleAnalyze = async () => {
     if (!transcript.trim()) {
-      setError('Please provide a meeting transcript.');
+      setError('Please provide a meeting transcript to read.');
       return;
     }
+
     setError(null);
     setLoading(true);
     setProposal(null);
     setActiveQuote(null);
     setConflictChoices({});
-    setAnalyzeTime(null);
-    const startTime = performance.now();
 
     try {
       const res = await fetch('/api/meetings/analyze', {
@@ -119,20 +125,20 @@ export default function NewMeetingView({ onMeetingSaved }) {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || 'Failed to analyze transcript');
+        throw new Error(errData.detail || 'Failed to read meeting transcript');
       }
 
-      const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
-      setAnalyzeTime(elapsed);
       const data = await res.json();
       setProposal(data);
 
-      // Initialize task updates inclusion map (all default to true)
+      // Initialize task updates inclusion map (default all true)
       const incMap = {};
       (data.task_updates || []).forEach((tu) => {
         incMap[tu.task_id] = true;
       });
       setTaskUpdatesIncluded(incMap);
+
+      setStep('review');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -178,20 +184,19 @@ export default function NewMeetingView({ onMeetingSaved }) {
   };
 
   // Determine if confirm is disabled:
-  // "The Confirm button stays disabled until every decision conflict has a choice."
+  // Approve is disabled until all decision conflicts are settled
   const decisionConflicts = (proposal?.conflicts || []).filter(
     (c) => c.type === 'decision_conflict'
   );
 
-  const pendingDecisionConflicts = decisionConflicts.filter((_, idx) => {
-    // Find the original index in proposal.conflicts
+  const pendingConflictsCount = decisionConflicts.filter((c) => {
     const originalIdx = proposal.conflicts.findIndex(
-      (c) => c.type === 'decision_conflict' && c.title === decisionConflicts[idx].title
+      (orig) => orig.type === 'decision_conflict' && orig.title === c.title
     );
     return !conflictChoices[originalIdx];
-  });
+  }).length;
 
-  const isConfirmDisabled = decisionConflicts.length > 0 && pendingDecisionConflicts.length > 0;
+  const isConfirmDisabled = pendingConflictsCount > 0;
 
   const handleConfirmAndSave = async () => {
     if (!proposal || isConfirmDisabled) return;
@@ -199,20 +204,22 @@ export default function NewMeetingView({ onMeetingSaved }) {
     setError(null);
 
     try {
-      // Build conflict resolutions array
       const conflictResolutionsList = (proposal.conflicts || []).map((c, idx) => {
-        const choice = conflictChoices[idx] || (c.type === 'decision_conflict' ? 'kept_new' : 'acknowledged');
+        const choice =
+          conflictChoices[idx] ||
+          (c.type === 'decision_conflict' ? 'kept_new' : 'acknowledged');
         return {
           conflict_index: idx,
           type: c.type,
           title: c.title,
           resolution: choice,
-          topic: c.old_decision_id ? c.title.replace("Conflict on '", '').replace("'", '') : null,
+          topic: c.old_decision_id
+            ? c.title.replace("Conflict on '", '').replace("'", '')
+            : null,
           old_decision_id: c.old_decision_id,
         };
       });
 
-      // Filter included task updates
       const includedUpdates = (proposal.task_updates || []).filter(
         (tu) => taskUpdatesIncluded[tu.task_id] !== false
       );
@@ -234,14 +241,19 @@ export default function NewMeetingView({ onMeetingSaved }) {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || 'Failed to confirm meeting');
+        throw new Error(errData.detail || 'Failed to approve and save meeting');
       }
 
       const savedMeeting = await res.json();
-      setSuccessMessage(
-        `Meeting "${savedMeeting.title}" confirmed! Decisions: ${savedMeeting.decisions.length}, Tasks: ${savedMeeting.tasks.length}, Conflicts logged: ${savedMeeting.conflicts.length}`
-      );
-      setProposal(null);
+      setSavedSummary({
+        title: savedMeeting.title,
+        decisionsSaved: savedMeeting.decisions.length,
+        tasksCreated: savedMeeting.tasks.length,
+        conflictsLogged: savedMeeting.conflicts.length,
+        updatesApplied: includedUpdates.length,
+      });
+
+      setStep('saved');
       if (onMeetingSaved) {
         onMeetingSaved(savedMeeting);
       }
@@ -252,741 +264,530 @@ export default function NewMeetingView({ onMeetingSaved }) {
     }
   };
 
-  const renderConfidenceBadge = (confidence) => {
-    const confVal = typeof confidence === 'number' ? confidence : 0.8;
-    const percentage = Math.round(confVal * 100);
-
-    if (confVal >= 0.85) {
-      return (
-        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-950/70 text-emerald-300 border border-emerald-700/60 flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-          {percentage}% Confidence
-        </span>
-      );
-    }
-    if (confVal >= 0.6) {
-      return (
-        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-950/70 text-amber-300 border border-amber-700/60 flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-          {percentage}% Confidence
-        </span>
-      );
-    }
-    return (
-      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-rose-950/70 text-rose-300 border border-rose-700/60 flex items-center gap-1">
-        <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-        {percentage}% Confidence
-      </span>
-    );
+  const handleStartAnother = () => {
+    setTitle('');
+    setTranscript('');
+    setSelectedDemoId('');
+    setProposal(null);
+    setSavedSummary(null);
+    setStep('paste');
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            New Meeting Analysis
-          </h2>
-          <p className="text-sm text-slate-400">
-            Memory-aware extraction of decisions, task updates, commitments, and cross-meeting conflicts.
-          </p>
-        </div>
-
-        {/* Demo Selector */}
-        <div className="flex items-center gap-3">
-          <label className="text-xs text-slate-400 font-medium whitespace-nowrap">
-            Load Demo:
-          </label>
-          <select
-            value={selectedDemoId}
-            onChange={handleSelectDemo}
-            className="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium cursor-pointer"
-          >
-            <option value="">Select a demo meeting...</option>
-            {demoMeetings.map((dm) => (
-              <option key={dm.id} value={dm.id}>
-                {dm.title} ({dm.meeting_date})
-              </option>
-            ))}
-          </select>
-        </div>
+    <div className="p-8 max-w-[1200px] mx-auto space-y-8 bg-white pb-32">
+      {/* 3-step sequence indicator: thin, text-only */}
+      <div className="flex items-center gap-3 text-[13px] border-b border-[#e7e9ee] pb-4">
+        <span
+          className={`font-semibold transition-colors ${
+            step === 'paste' ? 'text-[#0f1222]' : 'text-[#8a90a2]'
+          }`}
+        >
+          1. Paste
+        </span>
+        <span className="text-[#e7e9ee]">—</span>
+        <span
+          className={`font-semibold transition-colors ${
+            step === 'review' ? 'text-[#0f1222]' : 'text-[#8a90a2]'
+          }`}
+        >
+          2. Review
+        </span>
+        <span className="text-[#e7e9ee]">—</span>
+        <span
+          className={`font-semibold transition-colors ${
+            step === 'saved' ? 'text-[#0f1222]' : 'text-[#8a90a2]'
+          }`}
+        >
+          3. Saved
+        </span>
       </div>
 
-      {/* Notifications */}
+      {/* Error alert banner */}
       {error && (
-        <div className="p-4 rounded-xl bg-rose-950/60 border border-rose-800/80 text-rose-200 text-sm flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+        <div className="p-4 rounded-[6px] bg-[#fdf1f1] border border-[#d0272d]/30 text-[#d0272d] text-[14px] flex items-start gap-2.5">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="font-semibold">Analysis Notice</p>
-            <p className="text-rose-300/90 text-xs mt-0.5">{error}</p>
+            <span className="font-semibold">Error:</span> {error}
           </div>
         </div>
       )}
 
-      {successMessage && (
-        <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-800/80 text-emerald-200 text-sm flex items-start gap-3">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="font-semibold">Meeting Confirmed</p>
-            <p className="text-emerald-300/90 text-xs mt-0.5">{successMessage}</p>
+      {/* STEP 1: PASTE */}
+      {step === 'paste' && (
+        <div className="space-y-6 max-w-[800px]">
+          <div>
+            <h1 className="text-[30px] font-bold text-[#0f1222] tracking-[-0.02em] leading-tight">
+              New meeting
+            </h1>
+            <p className="text-[13px] text-[#5e6477] mt-0.5">
+              Paste or upload a meeting transcript. Nirnay extracts decisions, tracks tasks, and checks previous memory for clashes.
+            </p>
           </div>
-          <button
-            onClick={() => setSuccessMessage(null)}
-            className="text-xs text-emerald-400 underline hover:text-emerald-300"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
 
-      {/* Form Input View */}
-      {!proposal ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="space-y-4">
-            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4 shadow-xl">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Meeting Title
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Sprint Planning #14"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Meeting Date
-                </label>
-                <input
-                  type="date"
-                  value={meetingDate}
-                  onChange={(e) => setMeetingDate(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 [color-scheme:dark]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Upload .txt Transcript
-                </label>
-                <label className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 border-dashed rounded-xl cursor-pointer text-xs font-medium text-slate-300 transition-colors">
-                  <Upload className="w-4 h-4 text-indigo-400" />
-                  <span>Choose file (.txt)</span>
-                  <input
-                    type="file"
-                    accept=".txt"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-
-              <button
-                onClick={handleAnalyze}
-                disabled={loading || !transcript.trim()}
-                className={`w-full py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-lg ${
-                  loading || !transcript.trim()
-                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                    : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/30'
-                }`}
-              >
-                {loading ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                    <span>Analyzing with Groq AI...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-amber-300" />
-                    <span>Analyze with AI</span>
-                  </>
-                )}
-              </button>
+          {/* Title and Date Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="block text-[13px] font-medium text-[#0f1222]">
+                Meeting title
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Sprint 24 Planning, Launch Sync"
+                className="w-full px-3 py-2 bg-white border border-[#cdd1da] focus:border-[#1e35c7] rounded-[6px] text-[14px] text-[#0f1222] placeholder-[#8a90a2]"
+              />
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-400 space-y-1.5 leading-relaxed">
-              <p className="font-semibold text-slate-300">🧠 Cross-Meeting Memory Active</p>
-              <p>
-                Checks open tasks and active decisions to detect rescheduled deadlines, status completions, workload limits, and policy conflicts.
-              </p>
+            <div className="space-y-1.5">
+              <label className="block text-[13px] font-medium text-[#0f1222]">
+                Meeting date
+              </label>
+              <input
+                type="date"
+                value={meetingDate}
+                onChange={(e) => setMeetingDate(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-[#cdd1da] focus:border-[#1e35c7] rounded-[6px] text-[14px] text-[#0f1222] tabular-nums"
+              />
             </div>
           </div>
 
-          <div className="lg:col-span-2 flex flex-col bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl min-h-[460px]">
-            <div className="p-3.5 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-indigo-400" />
-                Raw Meeting Transcript
-              </span>
-              <span className="text-xs text-slate-500">
-                {transcript.split('\n').filter((l) => l.trim()).length} lines
+          {/* Transcript Textarea (Serif spoken voice) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-[13px] font-medium text-[#0f1222]">
+                Meeting transcript
+              </label>
+              <span className="text-[12px] text-[#8a90a2]">
+                Supports English, Hindi, and Hinglish dialogue
               </span>
             </div>
             <textarea
+              rows={12}
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
-              placeholder="Paste transcript here..."
-              className="flex-1 w-full bg-slate-950 p-4 text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none resize-none leading-relaxed"
+              placeholder="Paste dialogue here... e.g.&#10;Rahul: We should move the launch to 5 Feb.&#10;Amit: Main backend APIs 28 Dec tak complete kar dunga."
+              className="w-full p-4 bg-white border border-[#cdd1da] focus:border-[#1e35c7] rounded-[6px] font-serif text-[15.5px] leading-relaxed text-[#0f1222] placeholder-[#8a90a2]"
             />
           </div>
-        </div>
-      ) : (
-        /* PROPOSAL SCREEN (WITH CONFLICTS & UPDATES) */
-        <div className="space-y-6">
-          {/* 1. Cached Demo Banner if applicable */}
-          {proposal.cached_demo && (
-            <div className="p-3.5 rounded-2xl bg-amber-950/50 border border-amber-600/60 text-amber-200 text-xs font-medium flex items-center gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>
-                <strong>CACHED DEMO RESPONSE</strong> — not live AI (DEMO_FALLBACK enabled). Set GROQ_API_KEY for live inferences.
-              </span>
-            </div>
-          )}
 
-          {/* Proposal Header Banner */}
-          <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                  Step 2: Human Review & Confirmation
-                </span>
-                <span className="text-xs text-slate-400 font-mono">
-                  {proposal.meeting_date}
-                </span>
-                {analyzeTime && (
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-indigo-900/60 text-indigo-300 border border-indigo-700/60 flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-indigo-400" />
-                    <span>Analyzed in {analyzeTime}s with {modelName}</span>
-                  </span>
-                )}
-              </div>
-              <h3 className="text-lg font-bold text-white mt-1">
-                Proposal for: {proposal.title}
-              </h3>
-              <p className="text-xs text-slate-400">
-                Review conflicts, task updates, and proposed commitments before committing to memory.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
+          {/* Actions Bar */}
+          <div className="flex items-center justify-between gap-4 pt-2 flex-wrap">
+            <div className="flex items-center gap-2.5">
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.md"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
               <button
-                onClick={() => setProposal(null)}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3.5 py-2 rounded-[6px] text-[13px] font-medium bg-white hover:bg-[#f7f8fa] text-[#0f1222] border border-[#e7e9ee] transition-colors"
               >
-                Back to Edit Input
+                Upload .txt
               </button>
+
+              {/* Demo selector dropdown */}
+              {demoMeetings.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[12px] text-[#8a90a2]">or demo:</span>
+                  <select
+                    value={selectedDemoId}
+                    onChange={(e) => handleSelectDemo(e.target.value)}
+                    className="px-2.5 py-1.5 rounded-[6px] text-[13px] font-medium bg-white border border-[#e7e9ee] text-[#0f1222] focus:border-[#1e35c7]"
+                  >
+                    <option value="">Select demo meeting...</option>
+                    {demoMeetings.map((dm) => (
+                      <option key={dm.id} value={dm.id}>
+                        {dm.title} ({dm.meeting_date})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Primary Action Button */}
+            <div>
               <button
-                onClick={handleConfirmAndSave}
-                disabled={saving || isConfirmDisabled}
-                className={`px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-lg ${
-                  isConfirmDisabled
-                    ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed shadow-none'
-                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
-                }`}
-                title={isConfirmDisabled ? 'Select a choice for all decision conflicts first' : ''}
+                type="button"
+                onClick={handleAnalyze}
+                disabled={loading || !transcript.trim()}
+                className="px-5 py-2 rounded-[6px] text-[14px] font-semibold bg-[#1e35c7] hover:bg-[#172aa3] text-white disabled:opacity-50 transition-colors shadow-2xs"
               >
-                {saving ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Saving to SQLite...</span>
-                  </>
+                {loading ? (
+                  <span>Reading the meeting... {elapsedSeconds}s</span>
                 ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Confirm & Save Everything</span>
-                  </>
+                  <span>Read this meeting</span>
                 )}
               </button>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* 2-Column Proposal Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left 7 Cols: Proposal Sections */}
-            <div className="lg:col-span-7 space-y-6">
+      {/* STEP 2: REVIEW (Left 62% + Right 38% Sticky Transcript + Sticky Decision Bar) */}
+      {step === 'review' && proposal && (
+        <div className="space-y-8">
+          <div className="flex items-baseline justify-between border-b border-[#e7e9ee] pb-3">
+            <div>
+              <h1 className="text-[22px] font-semibold text-[#0f1222]">
+                Review record: {proposal.title}
+              </h1>
+              <p className="text-[13px] text-[#5e6477] mt-0.5 tabular-nums">
+                {proposal.meeting_date} · Review extracted decisions, settle clashes, and approve.
+              </p>
+            </div>
+            <button
+              onClick={() => setStep('paste')}
+              className="text-[13px] text-[#5e6477] hover:text-[#0f1222]"
+            >
+              Edit transcript
+            </button>
+          </div>
 
-              {/* 2. RED SECTION: CONFLICTS FOUND */}
-              {proposal.conflicts && proposal.conflicts.length > 0 && (
-                <div className="space-y-3 p-4 rounded-2xl bg-rose-950/20 border border-rose-900/60 shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold uppercase tracking-wider text-rose-300 flex items-center gap-2">
-                      <ShieldAlert className="w-4 h-4 text-rose-400" />
-                      Conflicts Found ({proposal.conflicts.length})
-                    </h4>
-                    {isConfirmDisabled && (
-                      <span className="text-[11px] font-semibold text-amber-300 bg-amber-950/80 px-2.5 py-0.5 rounded-full border border-amber-800">
-                        Choose resolution for {pendingDecisionConflicts.length} decision conflict(s)
-                      </span>
-                    )}
-                  </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Left 62% Column (7.5/12) */}
+            <div className="lg:col-span-7 space-y-8">
+              {/* 1. Conflicts (Bordered 10px panel, 3px red-pen left border) */}
+              {(proposal.conflicts || []).length > 0 && (
+                <section className="space-y-4">
+                  <h2 className="text-[17px] font-semibold text-[#0f1222] flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#d0272d]"></span>
+                    <span>Conflicts to settle ({proposal.conflicts.length})</span>
+                  </h2>
 
                   <div className="space-y-3">
                     {proposal.conflicts.map((conf, idx) => {
                       const isDecisionConflict = conf.type === 'decision_conflict';
-                      const currentChoice = conflictChoices[idx];
+                      const choice = conflictChoices[idx];
 
                       return (
                         <div
                           key={idx}
-                          className="p-4 bg-slate-900/95 border border-rose-900/80 rounded-2xl space-y-3 shadow-md"
+                          className="p-4 bg-white border border-[#e7e9ee] border-l-[3px] border-l-[#d0272d] rounded-[10px] space-y-3"
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              {conf.type === 'decision_conflict' && (
-                                <Shuffle className="w-4 h-4 text-amber-400" />
-                              )}
-                              {conf.type === 'workload_overload' && (
-                                <Users className="w-4 h-4 text-rose-400" />
-                              )}
-                              {conf.type === 'dependency_conflict' && (
-                                <GitBranch className="w-4 h-4 text-cyan-400" />
-                              )}
-                              <span className="text-xs font-bold text-white">
-                                {conf.title}
-                              </span>
-                            </div>
-                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800">
-                              {conf.type.replace('_', ' ')}
+                          <div>
+                            <span className="text-[12px] font-medium text-[#d0272d]">
+                              {conf.title}
                             </span>
+                            <p className="text-[14px] text-[#0f1222] mt-1 font-sans leading-relaxed">
+                              {conf.description}
+                            </p>
                           </div>
 
-                          <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                            {conf.description}
-                          </p>
-
-                          {/* Decision Conflict Comparison Card */}
                           {isDecisionConflict && (
-                            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                              <div className="grid grid-cols-1 sm:grid-cols-11 gap-2 items-center text-xs">
-                                {/* Old Value */}
-                                <div className="sm:col-span-5 p-2 rounded-lg bg-slate-900 border border-slate-800 text-center">
-                                  <span className="block text-[10px] uppercase text-slate-500 font-semibold">
-                                    Previous: {conf.old_meeting_title || 'Earlier'} ({conf.old_meeting_date})
-                                  </span>
-                                  <span className="font-bold text-amber-300 font-mono text-xs">
-                                    {conf.old_value}
-                                  </span>
-                                </div>
-
-                                <div className="sm:col-span-1 flex justify-center text-slate-500">
-                                  <ArrowRight className="w-4 h-4" />
-                                </div>
-
-                                {/* New Value */}
-                                <div className="sm:col-span-5 p-2 rounded-lg bg-slate-900 border border-slate-800 text-center">
-                                  <span className="block text-[10px] uppercase text-slate-500 font-semibold">
-                                    Proposed Value
-                                  </span>
-                                  <span className="font-bold text-emerald-300 font-mono text-xs">
-                                    {conf.new_value}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Decision Conflict Choice Buttons */}
-                              <div className="flex items-center gap-2 pt-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleConflictChoice(idx, 'kept_new')}
-                                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                                    currentChoice === 'kept_new'
-                                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/40'
-                                      : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700'
-                                  }`}
-                                >
-                                  {currentChoice === 'kept_new' && <Check className="w-3.5 h-3.5" />}
-                                  <span>Keep new decision</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleConflictChoice(idx, 'kept_old')}
-                                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                                    currentChoice === 'kept_old'
-                                      ? 'bg-amber-600 text-white shadow-md shadow-amber-900/40'
-                                      : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700'
-                                  }`}
-                                >
-                                  {currentChoice === 'kept_old' && <Check className="w-3.5 h-3.5" />}
-                                  <span>Keep old decision</span>
-                                </button>
-                              </div>
+                            <div className="flex items-center gap-3 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => handleConflictChoice(idx, 'kept_new')}
+                                className={`px-3 py-1.5 rounded-[6px] text-[13px] font-medium border transition-colors ${
+                                  choice === 'kept_new'
+                                    ? 'bg-[#eef8f3] text-[#14795a] border-[#14795a]'
+                                    : 'bg-white text-[#0f1222] border-[#e7e9ee] hover:bg-[#f7f8fa]'
+                                }`}
+                              >
+                                Keep the new one
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleConflictChoice(idx, 'kept_old')}
+                                className={`px-3 py-1.5 rounded-[6px] text-[13px] font-medium border transition-colors ${
+                                  choice === 'kept_old'
+                                    ? 'bg-[#fff6e5] text-[#b26b00] border-[#b26b00]'
+                                    : 'bg-white text-[#0f1222] border-[#e7e9ee] hover:bg-[#f7f8fa]'
+                                }`}
+                              >
+                                Keep the old one
+                              </button>
+                              {!choice && (
+                                <span className="text-[12px] text-[#d0272d] font-medium">
+                                  Action required
+                                </span>
+                              )}
                             </div>
                           )}
 
-                          {/* Workload Overload or Dependency Conflict Card */}
                           {!isDecisionConflict && (
-                            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
-                              {conf.related_titles && conf.related_titles.length > 0 && (
-                                <div className="text-xs space-y-1">
-                                  <span className="text-[10px] uppercase text-slate-500 font-semibold">
-                                    Related Deliverables:
-                                  </span>
-                                  <ul className="list-disc list-inside text-slate-300 space-y-0.5 font-medium pl-1">
-                                    {conf.related_titles.map((rt, r_idx) => (
-                                      <li key={r_idx}>{rt}</li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-
-                              <div className="flex items-center justify-between pt-1">
-                                <span className="text-[11px] text-slate-400">
-                                  Acknowledge this schedule friction to proceed:
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleConflictChoice(idx, 'acknowledged')}
-                                  className={`py-1 px-3 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                                    currentChoice === 'acknowledged'
-                                      ? 'bg-indigo-600 text-white'
-                                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                                  }`}
-                                >
-                                  {currentChoice === 'acknowledged' ? (
-                                    <>
-                                      <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                                      <span>Acknowledged</span>
-                                    </>
-                                  ) : (
-                                    <span>Acknowledge</span>
-                                  )}
-                                </button>
-                              </div>
+                            <div className="flex items-center gap-2 pt-1">
+                              <StampBadge status={choice || 'unresolved'} />
+                              <button
+                                type="button"
+                                onClick={() => handleConflictChoice(idx, 'acknowledged')}
+                                className="text-[12px] text-[#1e35c7] hover:underline"
+                              >
+                                Acknowledge clash
+                              </button>
                             </div>
                           )}
                         </div>
                       );
                     })}
                   </div>
-                </div>
+                </section>
               )}
 
-              {/* 3. BLUE SECTION: UPDATES TO EXISTING TASKS */}
-              {proposal.task_updates && proposal.task_updates.length > 0 && (
-                <div className="space-y-3 p-4 rounded-2xl bg-blue-950/20 border border-blue-900/60 shadow-lg">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold uppercase tracking-wider text-blue-300 flex items-center gap-2">
-                      <RefreshCw className="w-4 h-4 text-blue-400" />
-                      Updates to Existing Tasks ({proposal.task_updates.length})
-                    </h4>
-                  </div>
+              {/* 2. Updates to Existing Tasks */}
+              {(proposal.task_updates || []).length > 0 && (
+                <section className="space-y-3">
+                  <h2 className="text-[17px] font-semibold text-[#0f1222]">
+                    Updates to existing tasks ({proposal.task_updates.length})
+                  </h2>
 
-                  <div className="space-y-3">
+                  <div className="border-t border-b border-[#e7e9ee] divide-y divide-[#e7e9ee]">
                     {proposal.task_updates.map((tu) => {
                       const isIncluded = taskUpdatesIncluded[tu.task_id] !== false;
 
                       return (
-                        <div
-                          key={tu.task_id}
-                          className={`p-4 bg-slate-900 border rounded-2xl space-y-3 shadow-md transition-all ${
-                            isIncluded
-                              ? 'border-blue-800/80'
-                              : 'border-slate-800 opacity-60'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-center gap-2.5">
+                        <div key={tu.task_id} className="py-3 space-y-2">
+                          <div className="flex items-center justify-between text-[14px]">
+                            <div className="flex items-center gap-2">
                               <input
                                 type="checkbox"
                                 checked={isIncluded}
                                 onChange={() => toggleTaskUpdate(tu.task_id)}
-                                className="w-4 h-4 rounded text-blue-600 bg-slate-950 border-slate-700 focus:ring-blue-500 cursor-pointer"
+                                className="rounded-[4px] border-[#cdd1da] text-[#1e35c7] focus:ring-0"
                               />
-                              <div>
-                                <h5 className="text-sm font-bold text-white tracking-tight">
-                                  {tu.task_title}
-                                </h5>
-                                <span className="text-xs text-slate-400">
-                                  Owner: <strong>{tu.owner || 'Unassigned'}</strong>
+                              <span className="font-semibold text-[#0f1222]">
+                                {tu.existing_task_title || `Task #${tu.task_id}`}
+                              </span>
+                              <span className="text-[#8a90a2]">—</span>
+                              {tu.new_status && (
+                                <span className="text-[13px] font-medium text-[#14795a]">
+                                  Status → {tu.new_status}
                                 </span>
-                              </div>
+                              )}
+                              {tu.new_deadline && (
+                                <span className="text-[13px] font-medium text-[#1e35c7] tabular-nums">
+                                  Deadline → {tu.new_deadline}
+                                </span>
+                              )}
                             </div>
 
-                            {renderConfidenceBadge(tu.confidence)}
+                            <ConfidenceMark score={tu.confidence_score || 0.9} />
                           </div>
 
-                          {/* Transition Badges */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {tu.new_status && (
-                              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-semibold">
-                                <span className="text-slate-400 uppercase">{tu.old_status || 'PENDING'}</span>
-                                <ArrowRight className="w-3.5 h-3.5 text-blue-400" />
-                                <span className={tu.new_status === 'done' ? 'text-emerald-400 uppercase font-bold' : 'text-rose-400 uppercase font-bold'}>
-                                  {tu.new_status.toUpperCase()}
-                                </span>
-                              </div>
-                            )}
-
-                            {tu.new_deadline && (
-                              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-semibold">
-                                <span className="text-slate-400">Due: {tu.old_deadline || 'None'}</span>
-                                <ArrowRight className="w-3.5 h-3.5 text-blue-400" />
-                                <span className="text-amber-300 font-bold">
-                                  {tu.new_deadline}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Evidence Quote */}
-                          <div
-                            onClick={() => setActiveQuote(tu)}
-                            className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-blue-500/50 cursor-pointer group transition-all"
-                          >
-                            <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
-                              <span className="flex items-center gap-1 group-hover:text-blue-400">
-                                <Quote className="w-3 h-3 text-blue-400" />
-                                Evidence Quote
-                              </span>
-                              <span className="text-[10px] group-hover:text-blue-300 underline">
-                                Locate in transcript &rarr;
-                              </span>
-                            </div>
-                            <p className="text-xs italic text-slate-300 group-hover:text-white font-serif">
+                          {tu.evidence_quote && (
+                            <button
+                              type="button"
+                              onClick={() => setActiveQuote(tu.evidence_quote)}
+                              className="text-left w-full pl-6 text-[13px] font-serif italic text-[#5e6477] hover:text-[#0f1222]"
+                            >
                               "{tu.evidence_quote}"
-                            </p>
-                          </div>
+                            </button>
+                          )}
                         </div>
                       );
                     })}
                   </div>
-                </div>
+                </section>
               )}
 
-              {/* 4. AGREED DECISIONS SECTION */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-                    Agreed Decisions ({proposal.decisions.length})
-                  </h4>
-                </div>
+              {/* 3. New Decisions (Ledger rows) */}
+              <section className="space-y-3">
+                <h2 className="text-[17px] font-semibold text-[#0f1222]">
+                  New decisions ({proposal.decisions?.length || 0})
+                </h2>
 
-                {proposal.decisions.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic p-4 bg-slate-900 rounded-xl border border-slate-800">
-                    No decisions agreed upon in this transcript.
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {proposal.decisions.map((dec, idx) => (
-                      <div
-                        key={idx}
-                        className="p-4 bg-slate-900 border border-slate-800 rounded-2xl space-y-3 hover:border-slate-700 transition-all shadow-md"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded-md bg-indigo-950/80 text-indigo-300 border border-indigo-800">
-                              topic: {dec.topic}
-                            </span>
-                            <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-slate-800 text-amber-300 border border-slate-700">
-                              val: {dec.value}
-                            </span>
-                          </div>
-                          {renderConfidenceBadge(dec.confidence)}
+                <div className="border-t border-b border-[#e7e9ee] divide-y divide-[#e7e9ee]">
+                  {(proposal.decisions || []).map((dec, idx) => (
+                    <div key={idx} className="py-3 space-y-1.5 text-[14px]">
+                      <div className="flex items-baseline justify-between gap-4">
+                        <div className="w-36 shrink-0 font-medium text-[#0f1222]">
+                          {dec.topic?.replace(/_/g, ' ')}
                         </div>
-
-                        <div>
-                          <label className="text-[10px] font-semibold uppercase text-slate-500">
-                            Summary Description
-                          </label>
-                          <input
-                            type="text"
-                            value={dec.text}
-                            onChange={(e) =>
-                              updateDecisionField(idx, 'text', e.target.value)
-                            }
-                            className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                          />
-                        </div>
-
-                        <div
-                          onClick={() => setActiveQuote(dec)}
-                          className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-amber-500/50 cursor-pointer group transition-all"
-                        >
-                          <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
-                            <span className="flex items-center gap-1 group-hover:text-amber-400">
-                              <Quote className="w-3 h-3 text-indigo-400" />
-                              Evidence Quote
-                            </span>
-                            <span className="text-[10px] group-hover:text-amber-300 underline">
-                              Locate in transcript &rarr;
-                            </span>
-                          </div>
-                          <p className="text-xs italic text-slate-300 group-hover:text-white font-serif">
-                            "{dec.evidence_quote}"
-                          </p>
-                        </div>
+                        <input
+                          type="text"
+                          value={dec.value}
+                          onChange={(e) => updateDecisionField(idx, 'value', e.target.value)}
+                          className="flex-1 px-2 py-1 bg-white border border-transparent hover:border-[#e7e9ee] focus:border-[#1e35c7] rounded-[4px] font-semibold text-[#0f1222]"
+                        />
+                        <ConfidenceMark score={dec.confidence_score || 0.95} />
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
-              {/* 5. NEW TASKS SECTION */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                    New Action Items ({proposal.tasks.length})
-                  </h4>
+                      {dec.evidence_quote && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveQuote(dec.evidence_quote)}
+                          className="text-left w-full pl-36 text-[13px] font-serif italic text-[#5e6477] hover:text-[#0f1222] truncate block"
+                          title="Click to highlight in transcript"
+                        >
+                          "{dec.evidence_quote}"
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
+              </section>
 
-                {proposal.tasks.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic p-4 bg-slate-900 rounded-xl border border-slate-800">
-                    No new tasks detected in this transcript.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {proposal.tasks.map((task, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-4 bg-slate-900 border rounded-2xl space-y-3 shadow-md transition-all ${
-                          task.needs_clarification
-                            ? 'border-amber-700/80 ring-1 ring-amber-600/30'
-                            : 'border-slate-800 hover:border-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
+              {/* 4. New Tasks (Ledger rows with inline editable owner & deadline) */}
+              <section className="space-y-3">
+                <h2 className="text-[17px] font-semibold text-[#0f1222]">
+                  New tasks ({proposal.tasks?.length || 0})
+                </h2>
+
+                <div className="border-t border-b border-[#e7e9ee] divide-y divide-[#e7e9ee]">
+                  {(proposal.tasks || []).map((task, idx) => {
+                    const hasMissingOwner = !task.owner || task.owner.toLowerCase() === 'unassigned';
+
+                    return (
+                      <div key={idx} className="py-3 space-y-2 text-[14px]">
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
                           <input
                             type="text"
                             value={task.title}
-                            onChange={(e) =>
-                              updateTaskField(idx, 'title', e.target.value)
-                            }
-                            className="flex-1 bg-transparent border-b border-dashed border-slate-700 hover:border-slate-500 pb-1 text-sm font-semibold text-white focus:outline-none focus:border-indigo-500"
+                            onChange={(e) => updateTaskField(idx, 'title', e.target.value)}
+                            className="flex-1 min-w-[200px] px-2 py-1 bg-white border border-transparent hover:border-[#e7e9ee] focus:border-[#1e35c7] rounded-[4px] font-medium text-[#0f1222]"
                           />
-                          {renderConfidenceBadge(task.confidence)}
-                        </div>
 
-                        {/* Dependency Display */}
-                        {task.depends_on_title && (
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-cyan-950/60 text-cyan-300 border border-cyan-800/80 text-xs font-medium">
-                            <GitBranch className="w-3.5 h-3.5 text-cyan-400" />
-                            <span>Waits for: <strong>{task.depends_on_title}</strong></span>
-                          </div>
-                        )}
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                          <div>
-                            <label className="text-[10px] font-semibold uppercase text-slate-400 flex items-center gap-1">
-                              <UserCheck className="w-3 h-3 text-indigo-400" />
-                              Owner
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="Unassigned (No guess)"
-                              value={task.owner || ''}
-                              onChange={(e) =>
-                                updateTaskField(idx, 'owner', e.target.value)
-                              }
-                              className={`w-full mt-1 bg-slate-950 border rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
-                                !task.owner
-                                  ? 'border-amber-700/80 text-amber-300 placeholder-amber-500/50'
-                                  : 'border-slate-800 text-slate-200'
-                              }`}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="text-[10px] font-semibold uppercase text-slate-400 flex items-center gap-1">
-                              <Calendar className="w-3 h-3 text-indigo-400" />
-                              Deadline (YYYY-MM-DD)
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="YYYY-MM-DD or null"
-                              value={task.deadline || ''}
-                              onChange={(e) =>
-                                updateTaskField(idx, 'deadline', e.target.value)
-                              }
-                              className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                            />
-                          </div>
-                        </div>
-
-                        {task.needs_clarification && (
-                          <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-600/50 text-amber-200 space-y-1.5">
-                            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
-                              <HelpCircle className="w-4 h-4 text-amber-400 shrink-0" />
-                              <span>Needs Clarification</span>
+                          <div className="flex items-center gap-3">
+                            {/* Inline owner field */}
+                            <div className="flex items-center gap-1.5">
+                              <Avatar name={task.owner} size="xs" />
+                              {hasMissingOwner ? (
+                                <input
+                                  type="text"
+                                  value={task.owner || ''}
+                                  onChange={(e) => updateTaskField(idx, 'owner', e.target.value)}
+                                  placeholder="Who owns this?"
+                                  className="w-28 text-[12px] font-medium text-[#b26b00] placeholder-[#b26b00] border-b border-[#b26b00] bg-transparent focus:outline-none"
+                                />
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={task.owner}
+                                  onChange={(e) => updateTaskField(idx, 'owner', e.target.value)}
+                                  className="w-24 text-[13px] text-[#0f1222] font-medium border-b border-transparent hover:border-[#e7e9ee] focus:border-[#1e35c7] bg-transparent focus:outline-none"
+                                />
+                              )}
                             </div>
-                            <p className="text-xs text-amber-200/90 font-medium">
-                              {task.clarification_question ||
-                                'Owner or deadline is missing. Please fill in above to confirm.'}
-                            </p>
-                          </div>
-                        )}
 
-                        <div
-                          onClick={() => setActiveQuote(task)}
-                          className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-amber-500/50 cursor-pointer group transition-all"
-                        >
-                          <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
-                            <span className="flex items-center gap-1 group-hover:text-amber-400">
-                              <Quote className="w-3 h-3 text-indigo-400" />
-                              Evidence Quote
-                            </span>
-                            <span className="text-[10px] group-hover:text-amber-300 underline">
-                              Locate in transcript &rarr;
-                            </span>
+                            {/* Inline deadline field */}
+                            <input
+                              type="date"
+                              value={task.deadline || ''}
+                              onChange={(e) => updateTaskField(idx, 'deadline', e.target.value)}
+                              className="text-[12px] text-[#5e6477] border-b border-transparent hover:border-[#e7e9ee] focus:border-[#1e35c7] bg-transparent tabular-nums focus:outline-none"
+                            />
+
+                            <ConfidenceMark score={task.confidence_score || 0.9} />
                           </div>
-                          <p className="text-xs italic text-slate-300 group-hover:text-white font-serif">
-                            "{task.evidence_quote}"
-                          </p>
                         </div>
+
+                        {task.evidence_quote && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveQuote(task.evidence_quote)}
+                            className="text-left text-[13px] font-serif italic text-[#5e6477] hover:text-[#0f1222] truncate block"
+                            title="Click to highlight in transcript"
+                          >
+                            "{task.evidence_quote}"
+                          </button>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Bottom Confirm Button */}
-              <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
-                <div>
-                  {isConfirmDisabled && (
-                    <span className="text-xs text-amber-400 font-semibold flex items-center gap-1.5">
-                      <AlertTriangle className="w-4 h-4 text-amber-400" />
-                      Resolution required for decision conflicts above before confirming.
-                    </span>
-                  )}
+                    );
+                  })}
                 </div>
-
-                <button
-                  onClick={handleConfirmAndSave}
-                  disabled={saving || isConfirmDisabled}
-                  className={`px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg ${
-                    isConfirmDisabled
-                      ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed shadow-none'
-                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
-                  }`}
-                >
-                  {saving ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Saving to SQLite...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-5 h-5" />
-                      <span>Confirm & Save Everything</span>
-                    </>
-                  )}
-                </button>
-              </div>
+              </section>
             </div>
 
-            {/* Right 5 Cols: Transcript Inspector */}
-            <div className="lg:col-span-5 h-[calc(100vh-180px)] sticky top-24">
+            {/* Right 38% Column (5/12): Sticky Transcript Inspector */}
+            <div className="lg:col-span-5 sticky top-20 h-[640px]">
               <TranscriptHighlighter
                 transcript={proposal.transcript}
                 activeQuote={activeQuote}
               />
             </div>
+          </div>
+
+          {/* STICKY DECISION BAR */}
+          <div className="fixed bottom-0 left-[248px] right-0 bg-white border-t border-[#e7e9ee] px-8 py-3.5 z-40 shadow-elevated flex items-center justify-between">
+            <div className="flex items-center gap-3 text-[14px] text-[#5e6477]">
+              {pendingConflictsCount > 0 ? (
+                <span className="font-semibold text-[#d0272d] tabular-nums">
+                  {pendingConflictsCount} {pendingConflictsCount === 1 ? 'conflict' : 'conflicts'} left to settle
+                </span>
+              ) : (
+                <span className="font-semibold text-[#14795a] flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" /> All conflicts settled
+                </span>
+              )}
+              <span>·</span>
+              <span className="tabular-nums">
+                {Object.values(taskUpdatesIncluded).filter(Boolean).length}{' '}
+                {Object.values(taskUpdatesIncluded).filter(Boolean).length === 1 ? 'update' : 'updates'}
+              </span>
+              <span>·</span>
+              <span className="tabular-nums">
+                {proposal.tasks?.length || 0} {proposal.tasks?.length === 1 ? 'new task' : 'new tasks'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setStep('paste')}
+                className="px-4 py-2 rounded-[6px] text-[13px] font-medium bg-white hover:bg-[#f7f8fa] text-[#0f1222] border border-[#e7e9ee] transition-colors"
+              >
+                Back
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmAndSave}
+                disabled={saving || isConfirmDisabled}
+                className="px-5 py-2 rounded-[6px] text-[14px] font-semibold bg-[#1e35c7] hover:bg-[#172aa3] text-white disabled:opacity-40 transition-colors shadow-2xs flex items-center gap-2"
+                title={isConfirmDisabled ? 'Settle all decision conflicts before approving' : undefined}
+              >
+                {saving ? (
+                  <span>Saving...</span>
+                ) : (
+                  <span>Approve and save</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STEP 3: SAVED (Stamp scales in once over 300ms + Plain summary) */}
+      {step === 'saved' && savedSummary && (
+        <div className="py-12 max-w-[640px] mx-auto text-center space-y-6">
+          {/* Animated Stamp */}
+          <div className="inline-block animate-stamp">
+            <div className="px-6 py-2 rounded-[8px] border-2 border-dashed border-[#14795a] text-[#14795a] font-bold text-[18px] tracking-wide uppercase select-none">
+              Saved to memory
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-[22px] font-bold text-[#0f1222]">
+              {savedSummary.title}
+            </h2>
+            <p className="text-[15px] text-[#5e6477] leading-relaxed tabular-nums">
+              {savedSummary.decisionsSaved} decisions saved
+              {savedSummary.conflictsLogged > 0 ? `, ${savedSummary.conflictsLogged} conflicts resolved` : ''} ·{' '}
+              {savedSummary.tasksCreated} tasks created ·{' '}
+              {savedSummary.updatesApplied} updates applied
+            </p>
+          </div>
+
+          <div className="pt-4 flex items-center justify-center gap-3 flex-wrap">
+            <button
+              onClick={handleStartAnother}
+              className="px-4 py-2 rounded-[6px] text-[14px] font-semibold bg-[#1e35c7] hover:bg-[#172aa3] text-white transition-colors"
+            >
+              Read another meeting
+            </button>
+            <button
+              onClick={() => onMeetingSaved && onMeetingSaved()}
+              className="px-4 py-2 rounded-[6px] text-[14px] font-medium bg-white hover:bg-[#f7f8fa] text-[#0f1222] border border-[#e7e9ee] transition-colors"
+            >
+              Return to Today
+            </button>
           </div>
         </div>
       )}
