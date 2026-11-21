@@ -15,7 +15,8 @@ import GuidedDemoDrawer from './components/GuidedDemoDrawer';
 import HowItWorksModal from './components/HowItWorksModal';
 import ToastContainer from './components/ToastContainer';
 import QuickSwitcher from './ui/QuickSwitcher';
-import { Send, Zap, Search } from 'lucide-react';
+import { useTheme } from './ui/theme';
+import { Send, Zap, Search, Sun, Moon, Menu } from 'lucide-react';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -28,7 +29,35 @@ export default function App() {
   const [isDemoOpen, setIsDemoOpen] = useState(false);
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
   const [isQuickSwitcherOpen, setIsQuickSwitcherOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
+
+  const { effectiveTheme, setTheme } = useTheme();
+
+  // Collapsible sidebar state stored in localStorage
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('nirnay.sidebar') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('nirnay.sidebar', String(next));
+      } catch (e) {
+        console.warn('LocalStorage error saving sidebar state', e);
+      }
+      return next;
+    });
+  };
+
+  const toggleThemeMode = () => {
+    setTheme(effectiveTheme === 'dark' ? 'light' : 'dark');
+  };
 
   const addToast = (message, type = 'info') => {
     const id = Date.now() + Math.random();
@@ -66,19 +95,24 @@ export default function App() {
     refreshStats();
   }, [currentView]);
 
-  // Global Ctrl/Cmd + K shortcut listener for quick switcher
+  // Global Keyboard shortcuts: Ctrl/Cmd + K (quick switcher) and Ctrl/Cmd + B (sidebar)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setIsQuickSwitcherOpen((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault();
+        toggleSidebar();
+      } else if (e.key === 'Escape' && isMobileNavOpen) {
+        setIsMobileNavOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isMobileNavOpen]);
 
-  const handleMeetingSaved = (savedMeeting) => {
+  const handleMeetingSaved = () => {
     refreshStats();
     addToast('Meeting saved to memory. Tracker cards queued for approval.', 'success');
   };
@@ -117,43 +151,57 @@ export default function App() {
   };
 
   return (
-    <div className="flex min-h-screen bg-white text-[#0f1222] font-sans selection:bg-[#eef1fd] selection:text-[#1e35c7]">
-      {/* Left Navigation Sidebar */}
+    <div className="flex min-h-screen bg-bg text-ink font-sans selection:bg-accent-tint selection:text-accent-text">
+      {/* Navigation Sidebar */}
       <Sidebar
         currentView={currentView}
         setCurrentView={setCurrentView}
         stats={stats}
         onResetData={handleResetData}
-        onOpenHowItWorks={() => setIsHowItWorksOpen(true)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={toggleSidebar}
+        isMobileOpen={isMobileNavOpen}
+        onCloseMobile={() => setIsMobileNavOpen(false)}
       />
 
       {/* Main View Area */}
-      <main className="flex-1 overflow-y-auto min-h-screen bg-white relative flex flex-col">
-        {/* Top bar 56px, white, 1px bottom hairline */}
-        <header className="h-14 border-b border-[#e7e9ee] px-8 flex items-center justify-between bg-white sticky top-0 z-30 print:hidden shrink-0">
+      <main className="flex-1 overflow-y-auto min-h-screen bg-bg relative flex flex-col">
+        {/* Top bar 56px */}
+        <header className="h-14 border-b border-line px-4 sm:px-8 flex items-center justify-between bg-surface sticky top-0 z-30 print:hidden shrink-0">
           <div className="flex items-center gap-3">
-            <span className="text-[17px] font-semibold text-[#0f1222]">
+            {/* Mobile Hamburger Button */}
+            <button
+              onClick={() => setIsMobileNavOpen(true)}
+              className="lg:hidden p-1.5 rounded-[6px] text-ink-soft hover:text-ink hover:bg-fill transition-colors"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            <span className="text-[17px] font-semibold text-ink">
               {getPageTitle(currentView)}
             </span>
+
+            {/* Quick Switcher Search Pill */}
             <button
               onClick={() => setIsQuickSwitcherOpen(true)}
-              className="flex items-center gap-2 px-2.5 py-1 rounded-[6px] text-[12px] text-[#8a90a2] bg-[#f7f8fa] hover:bg-[#e7e9ee]/60 border border-[#e7e9ee] transition-colors"
+              className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-[6px] text-[12px] text-ink-faint bg-fill hover:bg-line border border-line transition-colors"
               title="Quick switcher (Ctrl/Cmd + K)"
             >
               <Search className="w-3.5 h-3.5" />
               <span>Search</span>
-              <kbd className="text-[10px] bg-white border border-[#e7e9ee] px-1 py-0.2 rounded text-[#5e6477]">
+              <kbd className="text-[10px] bg-surface border border-line px-1 py-0.2 rounded text-ink-soft">
                 ⌘K
               </kbd>
             </button>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Waiting for approval quick link button */}
             {stats.pendingOutboxCount > 0 && (
               <button
                 onClick={() => setCurrentView('outbox')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[13px] font-medium bg-[#fff6e5] hover:bg-[#ffeec2] text-[#b26b00] border border-[#b26b00]/30 transition-colors tabular-nums"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[13px] font-medium bg-amber-tint hover:bg-amber-tint/80 text-amber border border-amber/30 transition-colors tabular-nums"
               >
                 <Send className="w-3.5 h-3.5" strokeWidth={1.5} />
                 <span>Waiting for approval ({stats.pendingOutboxCount})</span>
@@ -163,14 +211,28 @@ export default function App() {
             {/* Guided Demo Button in Top Bar */}
             <button
               onClick={() => setIsDemoOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[13px] font-medium bg-white hover:bg-[#f7f8fa] text-[#0f1222] border border-[#e7e9ee] transition-colors shadow-2xs"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[13px] font-medium bg-surface hover:bg-fill text-ink border border-line transition-colors shadow-2xs"
             >
-              <Zap className="w-3.5 h-3.5 text-[#b26b00]" strokeWidth={1.5} />
+              <Zap className="w-3.5 h-3.5 text-amber" strokeWidth={1.5} />
               <span>Guided demo</span>
             </button>
 
             {/* Simulated date chip */}
             <TodayChip onDateChanged={refreshStats} />
+
+            {/* Compact Light / Dark Mode Toggle Button */}
+            <button
+              onClick={toggleThemeMode}
+              aria-label={effectiveTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={effectiveTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="p-1.5 rounded-[6px] text-ink-soft hover:text-ink hover:bg-fill border border-line transition-colors"
+            >
+              {effectiveTheme === 'dark' ? (
+                <Sun className="w-4 h-4 text-amber" />
+              ) : (
+                <Moon className="w-4 h-4 text-ink-soft" />
+              )}
+            </button>
           </div>
         </header>
 
@@ -219,6 +281,8 @@ export default function App() {
           isOpen={isQuickSwitcherOpen}
           onClose={() => setIsQuickSwitcherOpen(false)}
           onNavigate={setCurrentView}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebar={toggleSidebar}
         />
 
         {/* Global Toast Notifications */}

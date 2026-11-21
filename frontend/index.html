@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#ffffff" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
@@ -10,6 +10,25 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nirnay - Meeting ke faisle, kaam mein badlo</title>
+    <!-- Instant theme initialization without flash -->
+    <script>
+      (function() {
+        try {
+          var stored = localStorage.getItem('nirnay.theme') || 'light';
+          var effective = stored;
+          if (stored === 'system') {
+            effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          document.documentElement.setAttribute('data-theme', effective);
+          document.documentElement.style.colorScheme = effective;
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', effective === 'dark' ? '#0C0F17' : '#FFFFFF');
+        } catch(e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.style.colorScheme = 'light';
+        }
+      })();
+    </script>
     <!-- Google Fonts: Newsreader (spoken serif) & Hanken Grotesk (concluded sans) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,7 +37,6 @@
       rel="stylesheet"
     />
     <script>
-      // Clear any stale service workers that may intercept requests
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
           for (var r of registrations) { r.unregister(); }
@@ -26,7 +44,7 @@
       }
     </script>
   </head>
-  <body class="bg-white text-[#0F1222]">
+  <body class="bg-bg text-ink">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

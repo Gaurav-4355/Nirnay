@@ -45,29 +45,29 @@ export default function MeetingBriefView() {
   if (loading) {
     return (
       <div className="py-24 text-center">
-        <div className="w-6 h-6 border-2 border-[#1e35c7] border-t-transparent rounded-full animate-spin mx-auto"></div>
-        <p className="mt-3 text-[13px] text-[#5e6477]">Compiling next meeting brief...</p>
+        <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p className="mt-3 text-[13px] text-ink-soft">Compiling next meeting brief...</p>
       </div>
     );
   }
 
   if (!brief) {
     return (
-      <div className="p-8 text-center text-[#5e6477] text-[14px]">
+      <div className="p-8 text-center text-ink-soft text-[14px]">
         Failed to load meeting brief. Please try refreshing.
       </div>
     );
   }
 
   return (
-    <div className="p-8 max-w-[760px] mx-auto space-y-8 bg-white">
+    <div className="p-8 max-w-[760px] mx-auto space-y-8 bg-surface">
       {/* Top Action Bar (Hidden in Print) */}
-      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 pb-4 border-b border-[#e7e9ee] print:hidden">
+      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 pb-4 border-b border-line print:hidden">
         <div>
-          <h1 className="text-[30px] font-bold text-[#0f1222] tracking-[-0.02em] leading-tight">
+          <h1 className="text-[30px] font-bold text-ink tracking-[-0.02em] leading-tight">
             Next meeting brief
           </h1>
-          <p className="text-[13px] text-[#5e6477] mt-0.5">
+          <p className="text-[13px] text-ink-soft mt-0.5">
             Pre-meeting context pack with decisions, ownership commitments, risk items, and suggested agenda.
           </p>
         </div>
@@ -75,15 +75,15 @@ export default function MeetingBriefView() {
         <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={fetchBrief}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[13px] font-medium bg-white hover:bg-[#f7f8fa] text-[#0f1222] border border-[#e7e9ee] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[13px] font-medium bg-surface hover:bg-fill text-ink border border-line transition-colors"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-[#5e6477]" />
+            <RefreshCw className="w-3.5 h-3.5 text-ink-soft" />
             <span>Refresh</span>
           </button>
 
           <button
             onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-[6px] text-[13px] font-semibold bg-[#1e35c7] hover:bg-[#172aa3] text-white transition-colors"
+            className="flex items-center gap-2 px-4 py-1.5 rounded-[6px] text-[13px] font-semibold bg-accent hover:bg-accent-hover text-white transition-colors"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Print or save as PDF</span>
@@ -92,19 +92,19 @@ export default function MeetingBriefView() {
       </div>
 
       {/* Printable Brief Document Container */}
-      <div className="space-y-8 print:p-0 print:border-none print:bg-white print:text-black">
+      <div className="space-y-8 print:p-0 print:border-none print:bg-surface print:text-black">
         {/* Document Header */}
-        <div className="pb-4 border-b border-[#e7e9ee] flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
+        <div className="pb-4 border-b border-line flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
           <div>
-            <div className="text-[12px] font-semibold text-[#1e35c7]">
+            <div className="text-[12px] font-semibold text-accent-text">
               NIRNAY EXECUTIVE BRIEF
             </div>
-            <h2 className="text-[22px] font-bold text-[#0f1222] mt-0.5">
+            <h2 className="text-[22px] font-bold text-ink mt-0.5">
               Cross-Meeting Operations Brief
             </h2>
           </div>
 
-          <div className="text-right text-[12px] text-[#5e6477] tabular-nums">
+          <div className="text-right text-[12px] text-ink-soft tabular-nums">
             <div>Brief date: {brief.today}</div>
             {brief.last_meeting && (
               <div>Last meeting: {brief.last_meeting.title} ({brief.last_meeting.date})</div>
@@ -114,12 +114,12 @@ export default function MeetingBriefView() {
 
         {/* AI Suggested Agenda Items */}
         {brief.suggested_agenda && brief.suggested_agenda.length > 0 && (
-          <section className="p-4 rounded-[8px] bg-[#f7f8fa] border border-[#e7e9ee] space-y-2">
-            <div className="text-[13px] font-semibold text-[#0f1222] flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#1e35c7]" />
+          <section className="p-4 rounded-[8px] bg-fill border border-line space-y-2">
+            <div className="text-[13px] font-semibold text-ink flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-accent-text" />
               <span>Suggested agenda & discussion focus</span>
             </div>
-            <ul className="space-y-1.5 text-[13px] text-[#0f1222] pl-5 list-disc leading-relaxed">
+            <ul className="space-y-1.5 text-[13px] text-ink pl-5 list-disc leading-relaxed">
               {brief.suggested_agenda.map((agenda, aIdx) => (
                 <li key={aIdx}>{agenda}</li>
               ))}
@@ -129,14 +129,14 @@ export default function MeetingBriefView() {
 
         {/* Critical Alerts: Overdue, Blocked, Needs Clarification */}
         <section className="space-y-3">
-          <h3 className="text-[15px] font-semibold text-[#0f1222]">
+          <h3 className="text-[15px] font-semibold text-ink">
             Critical attention items
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Overdue */}
-            <div className="p-3.5 rounded-[8px] bg-white border border-[#e7e9ee] space-y-2">
-              <div className="flex items-center justify-between text-[13px] font-semibold text-[#d0272d]">
+            <div className="p-3.5 rounded-[8px] bg-surface border border-line space-y-2">
+              <div className="flex items-center justify-between text-[13px] font-semibold text-red">
                 <span className="flex items-center gap-1.5">
                   <AlertTriangle className="w-3.5 h-3.5" />
                   Overdue tasks
@@ -146,15 +146,15 @@ export default function MeetingBriefView() {
                 </span>
               </div>
               {brief.overdue_tasks?.length === 0 ? (
-                <p className="text-[12px] text-[#8a90a2] italic">No overdue tasks.</p>
+                <p className="text-[12px] text-ink-faint italic">No overdue tasks.</p>
               ) : (
                 <ul className="space-y-1.5 text-[13px]">
                   {brief.overdue_tasks.map((t) => (
-                    <li key={t.id} className="border-b border-[#e7e9ee] pb-1">
-                      <strong className="block text-[#0f1222] text-[13px]">{t.title}</strong>
-                      <div className="flex items-center justify-between text-[11px] text-[#5e6477] tabular-nums">
+                    <li key={t.id} className="border-b border-line pb-1">
+                      <strong className="block text-ink text-[13px]">{t.title}</strong>
+                      <div className="flex items-center justify-between text-[11px] text-ink-soft tabular-nums">
                         <span>@{t.owner || 'Unassigned'}</span>
-                        <span className="text-[#d0272d]">Due: {t.deadline}</span>
+                        <span className="text-red">Due: {t.deadline}</span>
                       </div>
                     </li>
                   ))}
@@ -163,8 +163,8 @@ export default function MeetingBriefView() {
             </div>
 
             {/* Blocked */}
-            <div className="p-3.5 rounded-[8px] bg-white border border-[#e7e9ee] space-y-2">
-              <div className="flex items-center justify-between text-[13px] font-semibold text-[#d0272d]">
+            <div className="p-3.5 rounded-[8px] bg-surface border border-line space-y-2">
+              <div className="flex items-center justify-between text-[13px] font-semibold text-red">
                 <span className="flex items-center gap-1.5">
                   <Ban className="w-3.5 h-3.5" />
                   Blocked tasks
@@ -174,15 +174,15 @@ export default function MeetingBriefView() {
                 </span>
               </div>
               {brief.blocked_tasks?.length === 0 ? (
-                <p className="text-[12px] text-[#8a90a2] italic">No blocked tasks.</p>
+                <p className="text-[12px] text-ink-faint italic">No blocked tasks.</p>
               ) : (
                 <ul className="space-y-1.5 text-[13px]">
                   {brief.blocked_tasks.map((t) => (
-                    <li key={t.id} className="border-b border-[#e7e9ee] pb-1">
-                      <strong className="block text-[#0f1222] text-[13px]">{t.title}</strong>
-                      <div className="flex items-center justify-between text-[11px] text-[#5e6477]">
+                    <li key={t.id} className="border-b border-line pb-1">
+                      <strong className="block text-ink text-[13px]">{t.title}</strong>
+                      <div className="flex items-center justify-between text-[11px] text-ink-soft">
                         <span>@{t.owner || 'Unassigned'}</span>
-                        <span className="text-[#d0272d]">Blocked</span>
+                        <span className="text-red">Blocked</span>
                       </div>
                     </li>
                   ))}
@@ -191,8 +191,8 @@ export default function MeetingBriefView() {
             </div>
 
             {/* Clarification */}
-            <div className="p-3.5 rounded-[8px] bg-white border border-[#e7e9ee] space-y-2">
-              <div className="flex items-center justify-between text-[13px] font-semibold text-[#b26b00]">
+            <div className="p-3.5 rounded-[8px] bg-surface border border-line space-y-2">
+              <div className="flex items-center justify-between text-[13px] font-semibold text-amber">
                 <span className="flex items-center gap-1.5">
                   <HelpCircle className="w-3.5 h-3.5" />
                   Needs clarification
@@ -202,14 +202,14 @@ export default function MeetingBriefView() {
                 </span>
               </div>
               {brief.clarification_tasks?.length === 0 ? (
-                <p className="text-[12px] text-[#8a90a2] italic">All task owners & scopes clear.</p>
+                <p className="text-[12px] text-ink-faint italic">All task owners & scopes clear.</p>
               ) : (
                 <ul className="space-y-1.5 text-[13px]">
                   {brief.clarification_tasks.map((t) => (
-                    <li key={t.id} className="border-b border-[#e7e9ee] pb-1">
-                      <strong className="block text-[#0f1222] text-[13px]">{t.title}</strong>
+                    <li key={t.id} className="border-b border-line pb-1">
+                      <strong className="block text-ink text-[13px]">{t.title}</strong>
                       {t.clarification_question && (
-                        <p className="text-[11px] text-[#b26b00] italic font-serif">
+                        <p className="text-[11px] text-amber italic font-serif">
                           "{t.clarification_question}"
                         </p>
                       )}
@@ -224,28 +224,28 @@ export default function MeetingBriefView() {
         {/* Dependencies at Risk */}
         {brief.dependencies_at_risk && brief.dependencies_at_risk.length > 0 && (
           <section className="space-y-3">
-            <h3 className="text-[15px] font-semibold text-[#0f1222] flex items-center gap-1.5">
-              <GitBranch className="w-4 h-4 text-[#1e35c7]" />
+            <h3 className="text-[15px] font-semibold text-ink flex items-center gap-1.5">
+              <GitBranch className="w-4 h-4 text-accent-text" />
               <span>Dependencies at risk ({brief.dependencies_at_risk.length})</span>
             </h3>
             <div className="space-y-2">
               {brief.dependencies_at_risk.map((dep, dIdx) => (
                 <div
                   key={dIdx}
-                  className="p-3 rounded-[6px] bg-[#f7f8fa] border border-[#e7e9ee] text-[13px] flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                  className="p-3 rounded-[6px] bg-fill border border-line text-[13px] flex flex-col sm:flex-row sm:items-center justify-between gap-2"
                 >
                   <div>
-                    <span className="font-semibold text-[#0f1222]">
+                    <span className="font-semibold text-ink">
                       '{dep.task_title}'
                     </span>{' '}
-                    <span className="text-[#5e6477]">
+                    <span className="text-ink-soft">
                       waits for prerequisite
                     </span>{' '}
-                    <strong className="text-[#0f1222]">
+                    <strong className="text-ink">
                       '{dep.depends_on_task_title}'
                     </strong>
                   </div>
-                  <span className="text-[12px] font-medium text-[#d0272d] tabular-nums">
+                  <span className="text-[12px] font-medium text-red tabular-nums">
                     {dep.risk_reason}
                   </span>
                 </div>
@@ -256,11 +256,11 @@ export default function MeetingBriefView() {
 
         {/* Active Decisions */}
         <section className="space-y-3">
-          <div className="flex items-center justify-between pb-1 border-b border-[#e7e9ee]">
-            <h3 className="text-[15px] font-semibold text-[#0f1222]">
+          <div className="flex items-center justify-between pb-1 border-b border-line">
+            <h3 className="text-[15px] font-semibold text-ink">
               Active decisions ({brief.active_decisions?.length || 0})
             </h3>
-            <span className="text-[12px] text-[#8a90a2] tabular-nums">
+            <span className="text-[12px] text-ink-faint tabular-nums">
               {brief.superseded_decisions_count || 0} superseded
             </span>
           </div>
@@ -268,13 +268,13 @@ export default function MeetingBriefView() {
           <div className="divide-y divide-[#e7e9ee]">
             {(brief.active_decisions || []).map((dec) => (
               <div key={dec.id} className="py-2.5 flex flex-col md:flex-row md:items-baseline justify-between gap-2 text-[14px]">
-                <div className="w-36 shrink-0 font-medium text-[#0f1222]">
+                <div className="w-36 shrink-0 font-medium text-ink">
                   {dec.topic?.replace(/_/g, ' ')}
                 </div>
                 <div className="flex-1 space-y-0.5">
-                  <div className="font-semibold text-[#0f1222]">{dec.value}</div>
+                  <div className="font-semibold text-ink">{dec.value}</div>
                   {dec.evidence_quote && (
-                    <p className="text-[12px] font-serif italic text-[#5e6477]">
+                    <p className="text-[12px] font-serif italic text-ink-soft">
                       "{dec.evidence_quote}"
                     </p>
                   )}
@@ -286,8 +286,8 @@ export default function MeetingBriefView() {
 
         {/* Open Tasks by Owner */}
         <section className="space-y-3">
-          <div className="pb-1 border-b border-[#e7e9ee]">
-            <h3 className="text-[15px] font-semibold text-[#0f1222]">
+          <div className="pb-1 border-b border-line">
+            <h3 className="text-[15px] font-semibold text-ink">
               Open tasks by team member
             </h3>
           </div>
@@ -296,14 +296,14 @@ export default function MeetingBriefView() {
             {Object.entries(brief.open_tasks_by_owner || {}).map(([owner, tasks]) => (
               <div
                 key={owner}
-                className="p-4 rounded-[8px] bg-white border border-[#e7e9ee] space-y-2.5"
+                className="p-4 rounded-[8px] bg-surface border border-line space-y-2.5"
               >
-                <div className="flex items-center justify-between pb-1.5 border-b border-[#e7e9ee]">
-                  <div className="flex items-center gap-2 text-[13px] font-semibold text-[#0f1222]">
+                <div className="flex items-center justify-between pb-1.5 border-b border-line">
+                  <div className="flex items-center gap-2 text-[13px] font-semibold text-ink">
                     <Avatar name={owner} size="xs" />
                     <span>{owner}</span>
                   </div>
-                  <span className="text-[11px] text-[#5e6477] tabular-nums">
+                  <span className="text-[11px] text-ink-soft tabular-nums">
                     {tasks.length} open
                   </span>
                 </div>
@@ -314,8 +314,8 @@ export default function MeetingBriefView() {
                       key={task.id}
                       className="flex items-center justify-between gap-2 py-1 text-[13px]"
                     >
-                      <span className="text-[#0f1222] truncate">{task.title}</span>
-                      <div className="flex items-center gap-2 shrink-0 text-[11px] tabular-nums text-[#5e6477]">
+                      <span className="text-ink truncate">{task.title}</span>
+                      <div className="flex items-center gap-2 shrink-0 text-[11px] tabular-nums text-ink-soft">
                         <span>{task.status}</span>
                         {task.deadline && <span>{task.deadline}</span>}
                       </div>

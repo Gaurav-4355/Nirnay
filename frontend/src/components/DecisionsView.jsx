@@ -116,7 +116,7 @@ export default function DecisionsView() {
             placeholder="Search topic or value..."
             value={searchTopic}
             onChange={(e) => setSearchTopic(e.target.value)}
-            className="w-full bg-white border border-stone-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400"
+            className="w-full bg-surface border border-stone-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400"
           />
         </div>
       </div>
@@ -140,7 +140,7 @@ export default function DecisionsView() {
           {Object.entries(groupedByTopic).map(([topic, decs]) => (
             <div
               key={topic}
-              className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-2xs"
+              className="bg-surface border border-stone-200 rounded-xl overflow-hidden shadow-2xs"
             >
               {/* Ledger Section Header */}
               <div className="px-5 py-3 bg-[#f7f6f2] border-b border-stone-200 flex items-center justify-between">
@@ -224,10 +224,10 @@ export default function DecisionsView() {
                       <div className="md:max-w-xs shrink-0 pt-0.5">
                         <button
                           onClick={() => handleOpenQuoteDrawer(d)}
-                          className="w-full text-left group border-l-2 border-[#e7e9ee] hover:border-[#1e35c7] pl-2.5 py-1 text-xs transition-colors rounded-r hover:bg-[#f7f8fa]"
+                          className="w-full text-left group border-l-2 border-line hover:border-accent pl-2.5 py-1 text-xs transition-colors rounded-r hover:bg-fill"
                           title="Click to view quotation in transcript"
                         >
-                          <div className="flex items-center gap-1 text-[10px] text-[#8a90a2] group-hover:text-[#1e35c7] mb-0.5">
+                          <div className="flex items-center gap-1 text-[10px] text-ink-faint group-hover:text-accent-text mb-0.5">
                             <Quote className="w-2.5 h-2.5" />
                             <span>Evidence citation</span>
                           </div>

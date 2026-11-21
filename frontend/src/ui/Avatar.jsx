@@ -1,10 +1,6 @@
 import React from 'react';
 import { getAvatarStyle } from './tokens';
 
-/**
- * Avatar: Initials, white background with a 1px ring and ink text;
- * tone picked from 6 restrained inks by name hash.
- */
 export default function Avatar({ name, size = 'sm' }) {
   const initials = (name || '?')
     .trim()
@@ -18,7 +14,7 @@ export default function Avatar({ name, size = 'sm' }) {
 
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-full bg-white border font-medium tabular-nums select-none shrink-0 ${ringStyle} ${sizeClass}`}
+      className={`inline-flex items-center justify-center rounded-full bg-surface border font-medium tabular-nums select-none shrink-0 ${ringStyle} ${sizeClass}`}
       title={name}
     >
       {initials}

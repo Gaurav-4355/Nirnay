@@ -138,7 +138,7 @@ export default function ConflictsView() {
               className={`p-2 rounded border text-center transition-all ${
                 day.isOverloaded
                   ? 'bg-amber-50 border-amber-300 text-amber-950 font-semibold shadow-2xs'
-                  : 'bg-white border-stone-200 text-stone-500'
+                  : 'bg-surface border-stone-200 text-stone-500'
               }`}
             >
               <div className="text-[10px] text-stone-400 font-normal">{day.label}</div>
@@ -221,7 +221,7 @@ export default function ConflictsView() {
             placeholder="Search conflicts..."
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
-            className="w-full bg-white border border-stone-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400"
+            className="w-full bg-surface border border-stone-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400"
           />
         </div>
       </div>
@@ -245,7 +245,7 @@ export default function ConflictsView() {
           {filteredConflicts.map((c) => (
             <div
               key={c.id}
-              className="bg-white border border-stone-200 rounded-xl p-5 shadow-2xs space-y-3"
+              className="bg-surface border border-stone-200 rounded-xl p-5 shadow-2xs space-y-3"
             >
               {/* Top row: Type indicator, Title, and Stamp Status */}
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">

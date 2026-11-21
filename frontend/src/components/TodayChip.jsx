@@ -83,12 +83,12 @@ export default function TodayChip({ onDateChanged }) {
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] text-[13px] font-medium border transition-colors tabular-nums ${
           todayInfo.simulated
-            ? 'bg-[#fff6e5] text-[#b26b00] border-[#b26b00]/30 hover:bg-[#ffeec2]'
-            : 'bg-white text-[#5e6477] border-[#e7e9ee] hover:text-[#0f1222] hover:bg-[#f7f8fa]'
+            ? 'bg-amber-tint text-amber border-amber/30 hover:bg-amber-tint'
+            : 'bg-surface text-ink-soft border-line hover:text-ink hover:bg-fill'
         }`}
         title="Adjust simulated date for demo meetings"
       >
-        <Calendar className={`w-3.5 h-3.5 ${todayInfo.simulated ? 'text-[#b26b00]' : 'text-[#5e6477]'}`} strokeWidth={1.5} />
+        <Calendar className={`w-3.5 h-3.5 ${todayInfo.simulated ? 'text-amber' : 'text-ink-soft'}`} strokeWidth={1.5} />
         <span>
           {todayInfo.today ? `Today: ${todayInfo.today}` : 'Today: ...'}
           {todayInfo.simulated && (
@@ -101,28 +101,28 @@ export default function TodayChip({ onDateChanged }) {
 
       {/* Date Adjustment Popover */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white border border-[#e7e9ee] rounded-[10px] shadow-elevated p-4 z-50 text-[13px] space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-[#e7e9ee]">
-            <span className="font-semibold text-[#0f1222]">Simulated date</span>
+        <div className="absolute right-0 mt-2 w-80 bg-surface border border-line rounded-[10px] shadow-elevated p-4 z-50 text-[13px] space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-line">
+            <span className="font-semibold text-ink">Simulated date</span>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-[#8a90a2] hover:text-[#0f1222]"
+              className="text-ink-faint hover:text-ink"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <p className="text-[12px] text-[#5e6477]">
+          <p className="text-[12px] text-ink-soft">
             Demo meetings are dated in Dec 2026. Adjust today's date to test reminder and overdue calculations.
           </p>
 
           <div className="space-y-1">
-            <label className="text-[12px] font-medium text-[#5e6477]">Date</label>
+            <label className="text-[12px] font-medium text-ink-soft">Date</label>
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full px-3 py-1.5 bg-white border border-[#cdd1da] focus:border-[#1e35c7] rounded-[6px] text-[13px] text-[#0f1222] tabular-nums"
+              className="w-full px-3 py-1.5 bg-surface border border-line-strong focus:border-accent rounded-[6px] text-[13px] text-ink tabular-nums"
             />
           </div>
 
@@ -131,32 +131,32 @@ export default function TodayChip({ onDateChanged }) {
             <button
               type="button"
               onClick={() => setSelectedDate('2026-12-17')}
-              className="px-2 py-1 bg-[#f7f8fa] hover:bg-[#e7e9ee] text-[#0f1222] rounded-[4px] border border-[#e7e9ee]"
+              className="px-2 py-1 bg-fill hover:bg-line text-ink rounded-[4px] border border-line"
             >
               17 Dec 2026
             </button>
             <button
               type="button"
               onClick={() => setSelectedDate('2026-12-21')}
-              className="px-2 py-1 bg-[#f7f8fa] hover:bg-[#e7e9ee] text-[#0f1222] rounded-[4px] border border-[#e7e9ee]"
+              className="px-2 py-1 bg-fill hover:bg-line text-ink rounded-[4px] border border-line"
             >
               21 Dec 2026
             </button>
             <button
               type="button"
               onClick={() => setSelectedDate('2026-12-29')}
-              className="px-2 py-1 bg-[#f7f8fa] hover:bg-[#e7e9ee] text-[#0f1222] rounded-[4px] border border-[#e7e9ee]"
+              className="px-2 py-1 bg-fill hover:bg-line text-ink rounded-[4px] border border-line"
             >
               29 Dec 2026
             </button>
           </div>
 
-          <div className="pt-2 flex items-center justify-between border-t border-[#e7e9ee]">
+          <div className="pt-2 flex items-center justify-between border-t border-line">
             <button
               type="button"
               onClick={handleUseRealDate}
               disabled={saving || !todayInfo.simulated}
-              className="text-[12px] text-[#5e6477] hover:text-[#0f1222] disabled:opacity-40"
+              className="text-[12px] text-ink-soft hover:text-ink disabled:opacity-40"
             >
               Use real date
             </button>
@@ -164,7 +164,7 @@ export default function TodayChip({ onDateChanged }) {
               type="button"
               onClick={handleSaveSimulated}
               disabled={saving || !selectedDate}
-              className="px-3 py-1.5 bg-[#1e35c7] hover:bg-[#172aa3] text-white rounded-[6px] text-[12px] font-semibold transition-colors"
+              className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white rounded-[6px] text-[12px] font-semibold transition-colors"
             >
               {saving ? 'Saving...' : 'Apply date'}
             </button>

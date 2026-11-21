@@ -262,24 +262,24 @@ export default function GuidedDemoDrawer({ isOpen, onClose, onNavigate, showToas
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full sm:w-[460px] bg-white border-l border-[#e7e9ee] shadow-elevated z-50 flex flex-col select-none">
+    <div className="fixed inset-y-0 right-0 w-full sm:w-[460px] bg-surface border-l border-line shadow-elevated z-50 flex flex-col select-none">
       {/* Header */}
-      <div className="p-5 border-b border-[#e7e9ee] flex items-center justify-between shrink-0">
+      <div className="p-5 border-b border-line flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-[6px] bg-[#1e35c7] flex items-center justify-center text-white">
+          <div className="w-7 h-7 rounded-[6px] bg-accent flex items-center justify-center text-white">
             <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
           </div>
           <div>
-            <h3 className="text-[15px] font-semibold text-[#0f1222]">
+            <h3 className="text-[15px] font-semibold text-ink">
               Guided demo
             </h3>
-            <p className="text-[12px] text-[#5e6477]">Step-by-step walkthrough for live testing</p>
+            <p className="text-[12px] text-ink-soft">Step-by-step walkthrough for live testing</p>
           </div>
         </div>
 
         <button
           onClick={onClose}
-          className="p-1 rounded-[6px] text-[#8a90a2] hover:text-[#0f1222] hover:bg-[#f7f8fa]"
+          className="p-1 rounded-[6px] text-ink-faint hover:text-ink hover:bg-fill"
         >
           <X className="w-4 h-4" />
         </button>
@@ -297,39 +297,39 @@ export default function GuidedDemoDrawer({ isOpen, onClose, onNavigate, showToas
               key={step.id}
               className={`p-4 rounded-[8px] border transition-colors space-y-2.5 ${
                 isDone
-                  ? 'bg-[#eef8f3]/40 border-[#14795a]/30'
+                  ? 'bg-green-tint/40 border-green/30'
                   : isActive
-                  ? 'bg-[#f7f8fa] border-[#1e35c7]'
-                  : 'bg-white border-[#e7e9ee]'
+                  ? 'bg-fill border-accent'
+                  : 'bg-surface border-line'
               }`}
             >
               {/* Step Header */}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
                   {isDone ? (
-                    <CheckCircle2 className="w-4 h-4 text-[#14795a] shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-green shrink-0" />
                   ) : (
-                    <span className="w-4 h-4 rounded-full border border-[#cdd1da] text-[11px] font-medium flex items-center justify-center text-[#5e6477] shrink-0 tabular-nums">
+                    <span className="w-4 h-4 rounded-full border border-line-strong text-[11px] font-medium flex items-center justify-center text-ink-soft shrink-0 tabular-nums">
                       {step.id + 1}
                     </span>
                   )}
-                  <h4 className="text-[14px] font-semibold text-[#0f1222]">{step.title}</h4>
+                  <h4 className="text-[14px] font-semibold text-ink">{step.title}</h4>
                 </div>
                 {stepData[step.id] && typeof stepData[step.id] === 'string' && (
-                  <span className="text-[11px] text-[#14795a] font-medium tabular-nums">
+                  <span className="text-[11px] text-green font-medium tabular-nums">
                     {stepData[step.id]}
                   </span>
                 )}
               </div>
 
               {/* Description */}
-              <p className="text-[13px] text-[#5e6477] leading-relaxed">
+              <p className="text-[13px] text-ink-soft leading-relaxed">
                 {step.description}
               </p>
 
               {/* Presenter Cue */}
-              <div className="p-2.5 rounded-[6px] bg-white border border-[#e7e9ee] text-[13px] leading-relaxed font-serif italic text-[#0f1222]">
-                <strong className="text-[11px] not-italic font-sans font-medium text-[#8a90a2] block mb-0.5">
+              <div className="p-2.5 rounded-[6px] bg-surface border border-line text-[13px] leading-relaxed font-serif italic text-ink">
+                <strong className="text-[11px] not-italic font-sans font-medium text-ink-faint block mb-0.5">
                   What to say:
                 </strong>
                 "{step.script}"
@@ -342,8 +342,8 @@ export default function GuidedDemoDrawer({ isOpen, onClose, onNavigate, showToas
                   disabled={isLoading}
                   className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-[6px] text-[13px] font-semibold transition-colors ${
                     isDone
-                      ? 'bg-white hover:bg-[#f7f8fa] text-[#0f1222] border border-[#e7e9ee]'
-                      : 'bg-[#1e35c7] hover:bg-[#172aa3] text-white'
+                      ? 'bg-surface hover:bg-fill text-ink border border-line'
+                      : 'bg-accent hover:bg-accent-hover text-white'
                   }`}
                 >
                   <Play className={`w-3.5 h-3.5 fill-current ${isLoading ? 'animate-spin' : ''}`} />

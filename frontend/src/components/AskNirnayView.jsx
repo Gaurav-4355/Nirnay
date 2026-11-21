@@ -120,20 +120,20 @@ export default function AskNirnayView({ showToast }) {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] max-w-3xl mx-auto p-6 space-y-4 bg-white">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] max-w-3xl mx-auto p-6 space-y-4 bg-surface">
       {/* Header */}
-      <div className="pb-4 border-b border-[#e7e9ee] shrink-0">
-        <h1 className="text-[22px] font-semibold text-[#0f1222]">
+      <div className="pb-4 border-b border-line shrink-0">
+        <h1 className="text-[22px] font-semibold text-ink">
           Ask Nirnay
         </h1>
-        <p className="text-[13px] text-[#5e6477] mt-0.5">
+        <p className="text-[13px] text-ink-soft mt-0.5">
           Ask questions about past decisions, deadlines, owners, or timeline conflicts with verified transcript citations.
         </p>
       </div>
 
       {/* Suggested Questions: Plain text links with underlines */}
-      <div className="flex items-center gap-3 overflow-x-auto pb-1 shrink-0 text-[13px] text-[#5e6477]">
-        <span className="shrink-0 flex items-center gap-1 font-medium text-[#8a90a2]">
+      <div className="flex items-center gap-3 overflow-x-auto pb-1 shrink-0 text-[13px] text-ink-soft">
+        <span className="shrink-0 flex items-center gap-1 font-medium text-ink-faint">
           <HelpCircle className="w-3.5 h-3.5" /> Suggestions:
         </span>
         {suggestedQuestions.map((sq, idx) => (
@@ -141,7 +141,7 @@ export default function AskNirnayView({ showToast }) {
             key={idx}
             disabled={loading}
             onClick={() => handleSendMessage(sq)}
-            className="text-[#1e35c7] hover:underline whitespace-nowrap transition-colors shrink-0 disabled:opacity-50 text-[13px]"
+            className="text-accent-text hover:underline whitespace-nowrap transition-colors shrink-0 disabled:opacity-50 text-[13px]"
           >
             {sq}
           </button>
@@ -158,16 +158,16 @@ export default function AskNirnayView({ showToast }) {
             <div
               className={`max-w-2xl p-4 rounded-[8px] text-[14px] leading-relaxed ${
                 msg.role === 'user'
-                  ? 'bg-[#f7f8fa] border border-[#e7e9ee] text-[#0f1222] font-medium'
-                  : 'bg-white border border-[#e7e9ee] text-[#0f1222]'
+                  ? 'bg-fill border border-line text-ink font-medium'
+                  : 'bg-surface border border-line text-ink'
               }`}
             >
               <div className="whitespace-pre-wrap">{msg.content}</div>
 
               {/* Citations list under assistant message */}
               {msg.citations && msg.citations.length > 0 && (
-                <div className="mt-3 pt-2.5 border-t border-[#e7e9ee] space-y-2">
-                  <div className="text-[11px] font-semibold text-[#5e6477] flex items-center gap-1">
+                <div className="mt-3 pt-2.5 border-t border-line space-y-2">
+                  <div className="text-[11px] font-semibold text-ink-soft flex items-center gap-1">
                     <Quote className="w-3 h-3" />
                     <span>Verified citations</span>
                   </div>
@@ -176,13 +176,13 @@ export default function AskNirnayView({ showToast }) {
                       <button
                         key={cIdx}
                         onClick={() => handleOpenCitation(cit)}
-                        className="p-2 rounded-[6px] bg-[#f7f8fa] hover:bg-[#eef1fd] border border-[#e7e9ee] text-[13px] flex flex-col items-start gap-0.5 transition-colors text-left group"
+                        className="p-2 rounded-[6px] bg-fill hover:bg-accent-tint border border-line text-[13px] flex flex-col items-start gap-0.5 transition-colors text-left group"
                         title="Click to view full transcript line"
                       >
-                        <span className="font-semibold text-[#1e35c7] text-[11px] group-hover:underline">
+                        <span className="font-semibold text-accent-text text-[11px] group-hover:underline">
                           Meeting {cit.meeting_id}
                         </span>
-                        <span className="font-serif italic text-[#0f1222]">"{cit.quote}"</span>
+                        <span className="font-serif italic text-ink">"{cit.quote}"</span>
                       </button>
                     ))}
                   </div>
@@ -195,7 +195,7 @@ export default function AskNirnayView({ showToast }) {
         {/* Loading Indicator */}
         {loading && (
           <div className="flex items-start">
-            <div className="p-3.5 rounded-[8px] bg-[#f7f8fa] border border-[#e7e9ee] text-[13px] text-[#5e6477] animate-pulse">
+            <div className="p-3.5 rounded-[8px] bg-fill border border-line text-[13px] text-ink-soft animate-pulse">
               Searching meeting memory and verifying citations...
             </div>
           </div>
@@ -203,7 +203,7 @@ export default function AskNirnayView({ showToast }) {
 
         {/* Error Retry Banner */}
         {errorMsg && (
-          <div className="p-3 rounded-[6px] bg-[#fdf1f1] border border-[#d0272d]/30 text-[13px] text-[#d0272d] flex items-center justify-between">
+          <div className="p-3 rounded-[6px] bg-red-tint border border-red/30 text-[13px] text-red flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{errorMsg}</span>
@@ -222,7 +222,7 @@ export default function AskNirnayView({ showToast }) {
       </div>
 
       {/* Input Box Footer */}
-      <div className="pt-2 border-t border-[#e7e9ee] shrink-0">
+      <div className="pt-2 border-t border-line shrink-0">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -236,12 +236,12 @@ export default function AskNirnayView({ showToast }) {
             onChange={(e) => setInputValue(e.target.value)}
             disabled={loading}
             placeholder="Ask about decisions, deadlines, owners, or timeline conflicts..."
-            className="flex-1 px-3.5 py-2.5 bg-white border border-[#cdd1da] rounded-[6px] text-[14px] text-[#0f1222] placeholder-[#8a90a2] focus:border-[#1e35c7] focus:outline-none transition-colors"
+            className="flex-1 px-3.5 py-2.5 bg-surface border border-line-strong rounded-[6px] text-[14px] text-ink placeholder-[#8a90a2] focus:border-accent focus:outline-none transition-colors"
           />
           <button
             type="submit"
             disabled={loading || !inputValue.trim()}
-            className="px-4 py-2.5 rounded-[6px] bg-[#1e35c7] hover:bg-[#172aa3] disabled:opacity-40 text-white text-[13px] font-semibold transition-colors flex items-center gap-1.5"
+            className="px-4 py-2.5 rounded-[6px] bg-accent hover:bg-accent-hover disabled:opacity-40 text-white text-[13px] font-semibold transition-colors flex items-center gap-1.5"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Send</span>

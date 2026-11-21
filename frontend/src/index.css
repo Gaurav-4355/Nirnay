@@ -1,29 +1,80 @@
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    --surface: #ffffff;
-    --subtle-fill: #f7f8fa;
-    --hairline: #e7e9ee;
-    --hairline-strong: #cdd1da;
-    --ink: #0f1222;
-    --ink-soft: #5e6477;
-    --ink-faint: #8a90a2;
-    --pen-blue: #1e35c7;
-    --pen-blue-hover: #172aa3;
-    --pen-blue-tint: #eef1fd;
-    --red-pen: #d0272d;
-    --red-pen-tint: #fdf1f1;
-    --stamp-green: #14795a;
-    --stamp-green-tint: #eef8f3;
-    --pencil-amber: #b26b00;
-    --pencil-amber-tint: #fff6e5;
-    --highlighter: #ffe066;
-  }
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-fill: var(--fill);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-text: var(--accent-text);
+  --color-accent-tint: var(--accent-tint);
+  --color-red: var(--red);
+  --color-red-tint: var(--red-tint);
+  --color-green: var(--green);
+  --color-green-tint: var(--green-tint);
+  --color-amber: var(--amber);
+  --color-amber-tint: var(--amber-tint);
+  --color-highlight: var(--highlight);
+}
 
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --raised: #ffffff;
+  --fill: #f7f8fa;
+  --line: #e7e9ee;
+  --line-strong: #cdd1da;
+  --ink: #0f1222;
+  --ink-soft: #5e6477;
+  --ink-faint: #8a90a2;
+  --accent: #1e35c7;
+  --accent-hover: #172aa3;
+  --accent-text: #1e35c7;
+  --accent-tint: #eef1fd;
+  --red: #d0272d;
+  --red-tint: #fdf1f1;
+  --green: #14795a;
+  --green-tint: #eef8f3;
+  --amber: #b26b00;
+  --amber-tint: #fff6e5;
+  --highlight: #ffe066;
+  --shadow-pop: 0 8px 24px rgba(15, 18, 34, 0.08);
+}
+
+:root[data-theme="dark"] {
+  --bg: #0c0f17;
+  --surface: #0c0f17;
+  --raised: #151a26;
+  --fill: #131825;
+  --line: #1f2433;
+  --line-strong: #2e3548;
+  --ink: #eceff8;
+  --ink-soft: #a3aac0;
+  --ink-faint: #6f768c;
+  --accent: #4a5cf0;
+  --accent-hover: #5a6cff;
+  --accent-text: #9aa7ff;
+  --accent-tint: rgba(131, 147, 255, 0.12);
+  --red: #ff6b6b;
+  --red-tint: rgba(255, 107, 107, 0.12);
+  --green: #4ccb9f;
+  --green-tint: rgba(76, 203, 159, 0.12);
+  --amber: #f2b44e;
+  --amber-tint: rgba(242, 180, 78, 0.12);
+  --highlight: rgba(255, 224, 102, 0.22);
+  --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+@layer base {
   body {
-    background-color: #ffffff;
-    color: #0f1222;
+    background-color: var(--bg);
+    color: var(--ink);
     font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 15px;
     line-height: 1.55;
@@ -33,27 +84,38 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Visible 2px pen-blue focus ring with 2px offset */
+  /* Visible 2px accent focus ring with 2px offset */
   :focus-visible {
-    outline: 2px solid #1e35c7;
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
 
-  /* Light editorial scrollbar */
+  /* Responsive scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #ffffff;
+    background: var(--bg);
   }
   ::-webkit-scrollbar-thumb {
-    background: #cdd1da;
+    background: var(--line-strong);
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #8a90a2;
+    background: var(--ink-faint);
   }
+
+  /* Date inputs and select options dark support */
+  input[type="date"], select {
+    color-scheme: light dark;
+  }
+}
+
+/* Disable transitions during theme switch */
+.no-transitions,
+.no-transitions * {
+  transition: none !important;
 }
 
 /* Font utility classes */
@@ -67,16 +129,17 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Marked-up record markings */
+/* Evidence citation marking */
 .evidence-highlight {
-  background-color: #ffe066;
+  background-color: var(--highlight);
+  border-left: 2px solid #ffe066;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
-  padding: 1px 3px;
+  padding: 1px 4px;
   border-radius: 2px;
 }
 
-/* Red-pen strike-through for replaced decisions and overdue lines */
+/* Red-pen strike-through for superseded decisions and deadline slips */
 @keyframes drawRedLine {
   0% {
     width: 0%;
@@ -90,7 +153,7 @@
   display: inline-block;
   position: relative;
   text-decoration: line-through;
-  text-decoration-color: #d0272d;
+  text-decoration-color: var(--red);
   text-decoration-thickness: 1.5px;
 }
 .animate-red-pen::after {
@@ -99,7 +162,7 @@
   left: 0;
   top: 50%;
   height: 1.5px;
-  background-color: #d0272d;
+  background-color: var(--red);
   animation: drawRedLine 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
@@ -128,11 +191,23 @@
 
 /* Elevation shadows - allowed ONLY on sticky decision bar, popovers, and modals */
 .shadow-elevated {
-  box-shadow: 0 8px 24px rgba(15, 18, 34, 0.08);
+  box-shadow: var(--shadow-pop);
 }
 
-/* Print Styles */
+/* Print Styles - ALWAYS black on white */
 @media print {
+  :root,
+  :root[data-theme="dark"] {
+    --bg: #ffffff !important;
+    --surface: #ffffff !important;
+    --raised: #ffffff !important;
+    --fill: #f7f8fa !important;
+    --line: #e7e9ee !important;
+    --ink: #000000 !important;
+    --ink-soft: #333333 !important;
+    --ink-faint: #666666 !important;
+    --accent: #000000 !important;
+  }
   body {
     background-color: #ffffff !important;
     color: #000000 !important;

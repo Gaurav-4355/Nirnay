@@ -322,7 +322,7 @@ export default function TasksView({ showToast }) {
               onClick={() => handleSetViewMode('board')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 viewMode === 'board'
-                  ? 'bg-white text-stone-900 shadow-2xs font-semibold'
+                  ? 'bg-surface text-stone-900 shadow-2xs font-semibold'
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
@@ -333,7 +333,7 @@ export default function TasksView({ showToast }) {
               onClick={() => handleSetViewMode('table')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 viewMode === 'table'
-                  ? 'bg-white text-stone-900 shadow-2xs font-semibold'
+                  ? 'bg-surface text-stone-900 shadow-2xs font-semibold'
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
@@ -357,7 +357,7 @@ export default function TasksView({ showToast }) {
           className={`px-3 py-1 rounded-lg font-medium transition-all ${
             !ownerFilter
               ? 'bg-stone-900 text-white shadow-2xs'
-              : 'bg-white text-stone-700 hover:bg-stone-100 border border-stone-200'
+              : 'bg-surface text-stone-700 hover:bg-stone-100 border border-stone-200'
           }`}
         >
           All ({totalCount})
@@ -371,7 +371,7 @@ export default function TasksView({ showToast }) {
               className={`px-3 py-1 rounded-lg font-medium transition-all ${
                 ownerFilter === owner
                   ? 'bg-stone-900 text-white shadow-2xs'
-                  : 'bg-white text-stone-700 hover:bg-stone-100 border border-stone-200'
+                  : 'bg-surface text-stone-700 hover:bg-stone-100 border border-stone-200'
               }`}
             >
               @{owner} ({count})
@@ -443,7 +443,7 @@ export default function TasksView({ showToast }) {
                         key={task.id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, task.id)}
-                        className="group relative p-3.5 rounded-lg bg-white hover:bg-stone-50/80 border border-stone-200 hover:border-stone-300 transition-all space-y-2.5 cursor-grab active:cursor-grabbing shadow-2xs"
+                        className="group relative p-3.5 rounded-lg bg-surface hover:bg-stone-50/80 border border-stone-200 hover:border-stone-300 transition-all space-y-2.5 cursor-grab active:cursor-grabbing shadow-2xs"
                       >
                         {/* Drag Handle on hover */}
                         <div className="absolute top-2.5 right-2 opacity-0 group-hover:opacity-100 text-stone-300 hover:text-stone-500 transition-opacity">
@@ -474,7 +474,7 @@ export default function TasksView({ showToast }) {
                                   placeholder="Owner name..."
                                   value={assignOwnerInput}
                                   onChange={(e) => setAssignOwnerInput(e.target.value)}
-                                  className="w-24 px-1.5 py-0.5 text-xs bg-white border border-stone-300 rounded focus:outline-none"
+                                  className="w-24 px-1.5 py-0.5 text-xs bg-surface border border-stone-300 rounded focus:outline-none"
                                   autoFocus
                                 />
                                 <button
@@ -527,7 +527,7 @@ export default function TasksView({ showToast }) {
                               href={task.trello_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[#1e35c7] hover:text-[#172aa3] flex items-center gap-0.5"
+                              className="text-accent-text hover:text-[#172aa3] flex items-center gap-0.5"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <span>Trello</span>
@@ -545,7 +545,7 @@ export default function TasksView({ showToast }) {
         </div>
       ) : (
         /* TABLE VIEW (Dense with hairlines, sortable by deadline) */
-        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-2xs">
+        <div className="bg-surface border border-stone-200 rounded-xl overflow-hidden shadow-2xs">
           {/* Table Header */}
           <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-[#f7f6f2] border-b border-stone-200 text-xs font-semibold text-stone-700">
             <div className="col-span-5">Task Title</div>
@@ -594,7 +594,7 @@ export default function TasksView({ showToast }) {
                         placeholder="Name..."
                         value={assignOwnerInput}
                         onChange={(e) => setAssignOwnerInput(e.target.value)}
-                        className="w-20 px-1 py-0.5 text-xs bg-white border border-stone-300 rounded"
+                        className="w-20 px-1 py-0.5 text-xs bg-surface border border-stone-300 rounded"
                         autoFocus
                       />
                       <button
@@ -626,7 +626,7 @@ export default function TasksView({ showToast }) {
                     value={task.status}
                     disabled={updatingTaskId === task.id}
                     onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                    className="text-xs font-medium px-2 py-1 rounded border border-stone-200 bg-white text-stone-800 focus:outline-none cursor-pointer"
+                    className="text-xs font-medium px-2 py-1 rounded border border-stone-200 bg-surface text-stone-800 focus:outline-none cursor-pointer"
                   >
                     <option value="pending">Pending</option>
                     <option value="blocked">Blocked</option>
@@ -641,7 +641,7 @@ export default function TasksView({ showToast }) {
                       href={task.trello_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[#1e35c7] hover:text-[#172aa3] text-xs inline-flex items-center gap-0.5"
+                      className="text-accent-text hover:text-[#172aa3] text-xs inline-flex items-center gap-0.5"
                     >
                       <span>Trello</span>
                       <ExternalLink className="w-2.5 h-2.5" />

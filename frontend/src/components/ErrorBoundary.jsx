@@ -16,15 +16,15 @@ export default function ErrorBoundary({ children }) {
 
   if (hasError) {
     return (
-      <div className="min-h-screen bg-white text-[#0f1222] flex flex-col items-center justify-center p-6 font-sans">
-        <div className="max-w-xl w-full bg-white border border-[#d0272d]/40 rounded-[10px] p-8 shadow-elevated space-y-4">
-          <h2 className="text-[20px] font-bold text-[#d0272d]">
+      <div className="min-h-screen bg-surface text-ink flex flex-col items-center justify-center p-6 font-sans">
+        <div className="max-w-xl w-full bg-surface border border-red/40 rounded-[10px] p-8 shadow-elevated space-y-4">
+          <h2 className="text-[20px] font-bold text-red">
             Application error
           </h2>
-          <p className="text-[14px] text-[#5e6477] leading-relaxed">
+          <p className="text-[14px] text-ink-soft leading-relaxed">
             A client-side error occurred. Clearing local browser cache may resolve this.
           </p>
-          <pre className="bg-[#f7f8fa] border border-[#e7e9ee] rounded-[6px] p-3 text-[12px] text-[#d0272d] overflow-x-auto whitespace-pre-wrap font-mono">
+          <pre className="bg-fill border border-line rounded-[6px] p-3 text-[12px] text-red overflow-x-auto whitespace-pre-wrap font-mono">
             {error?.toString() || 'Unknown error'}
           </pre>
           <div className="pt-2 flex gap-3">
@@ -33,13 +33,13 @@ export default function ErrorBoundary({ children }) {
                 if (typeof localStorage !== 'undefined') localStorage.clear();
                 window.location.reload();
               }}
-              className="px-4 py-2 bg-[#1e35c7] hover:bg-[#172aa3] text-white rounded-[6px] text-[13px] font-semibold transition-colors"
+              className="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-[6px] text-[13px] font-semibold transition-colors"
             >
               Clear cache & reload
             </button>
             <button
               onClick={() => (window.location.href = '/')}
-              className="px-4 py-2 bg-white hover:bg-[#f7f8fa] text-[#0f1222] rounded-[6px] text-[13px] font-medium border border-[#e7e9ee] transition-colors"
+              className="px-4 py-2 bg-surface hover:bg-fill text-ink rounded-[6px] text-[13px] font-medium border border-line transition-colors"
             >
               Go to Today
             </button>

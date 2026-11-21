@@ -1,58 +1,38 @@
 // Design tokens and helpers for Nirnay's marked-up record system
 
-export const TOKENS = {
-  surface: '#ffffff',
-  subtle: '#f7f8fa',
-  hairline: '#e7e9ee',
-  hairlineStrong: '#cdd1da',
-  ink: '#0f1222',
-  inkSoft: '#5e6477',
-  inkFaint: '#8a90a2',
-  penBlue: '#1e35c7',
-  penBlueHover: '#172aa3',
-  penBlueTint: '#eef1fd',
-  redPen: '#d0272d',
-  redPenTint: '#fdf1f1',
-  stampGreen: '#14795a',
-  stampGreenTint: '#eef8f3',
-  pencilAmber: '#b26b00',
-  pencilAmberTint: '#fff6e5',
-  highlighter: '#ffe066',
-};
-
 export const STAMP_STYLES = {
   // Task & Decision statuses
-  active: 'bg-[#eef8f3] text-[#14795a] border-[#14795a]/30',
-  done: 'bg-[#eef8f3] text-[#14795a] border-[#14795a]/30',
-  pending: 'bg-[#f7f8fa] text-[#5e6477] border-[#e7e9ee]',
-  blocked: 'bg-[#fdf1f1] text-[#d0272d] border-[#d0272d]/30',
-  overdue: 'bg-[#fdf1f1] text-[#d0272d] border-[#d0272d]/30',
-  superseded: 'bg-[#f7f8fa] text-[#8a90a2] border-[#e7e9ee] line-through',
+  active: 'bg-green-tint text-green border-green/30',
+  done: 'bg-green-tint text-green border-green/30',
+  pending: 'bg-fill text-ink-soft border-line',
+  blocked: 'bg-red-tint text-red border-red/30',
+  overdue: 'bg-red-tint text-red border-red/30',
+  superseded: 'bg-fill text-ink-faint border-line line-through',
 
   // Conflict resolutions
-  kept_new: 'bg-[#eef8f3] text-[#14795a] border-[#14795a]/30',
-  kept_old: 'bg-[#fff6e5] text-[#b26b00] border-[#b26b00]/30',
-  acknowledged: 'bg-[#f7f8fa] text-[#5e6477] border-[#e7e9ee]',
-  unresolved: 'bg-[#fdf1f1] text-[#d0272d] border-[#d0272d]/30',
+  kept_new: 'bg-green-tint text-green border-green/30',
+  kept_old: 'bg-amber-tint text-amber border-amber/30',
+  acknowledged: 'bg-fill text-ink-soft border-line',
+  unresolved: 'bg-red-tint text-red border-red/30',
 
   // Needs input / assignments
-  unassigned: 'bg-[#fff6e5] text-[#b26b00] border-[#b26b00]/30',
-  needs_clarification: 'bg-[#fff6e5] text-[#b26b00] border-[#b26b00]/30',
-  clarification: 'bg-[#fff6e5] text-[#b26b00] border-[#b26b00]/30',
+  unassigned: 'bg-amber-tint text-amber border-amber/30',
+  needs_clarification: 'bg-amber-tint text-amber border-amber/30',
+  clarification: 'bg-amber-tint text-amber border-amber/30',
 };
 
-// 6 restrained ink tones for avatar rings based on name hash
+// Restrained ink tones for avatar rings using CSS tokens
 const AVATAR_RINGS = [
-  'border-[#1e35c7] text-[#1e35c7]', // pen-blue
-  'border-[#5e6477] text-[#0f1222]', // ink-soft
-  'border-[#14795a] text-[#14795a]', // stamp-green
-  'border-[#b26b00] text-[#b26b00]', // pencil-amber
-  'border-[#795290] text-[#795290]', // subdued plum
-  'border-[#3d5a80] text-[#3d5a80]', // slate ink
+  'border-accent text-accent-text',
+  'border-ink-soft text-ink',
+  'border-green text-green',
+  'border-amber text-amber',
+  'border-line-strong text-ink-soft',
+  'border-red text-red',
 ];
 
 export function getAvatarStyle(name) {
-  if (!name) return 'border-[#cdd1da] text-[#5e6477]';
+  if (!name) return 'border-line-strong text-ink-soft';
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);

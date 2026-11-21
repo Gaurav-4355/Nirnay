@@ -274,12 +274,12 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
   };
 
   return (
-    <div className="p-8 max-w-[1200px] mx-auto space-y-8 bg-white pb-32">
+    <div className="p-8 max-w-[1200px] mx-auto space-y-8 bg-surface pb-32">
       {/* 3-step sequence indicator: thin, text-only */}
-      <div className="flex items-center gap-3 text-[13px] border-b border-[#e7e9ee] pb-4">
+      <div className="flex items-center gap-3 text-[13px] border-b border-line pb-4">
         <span
           className={`font-semibold transition-colors ${
-            step === 'paste' ? 'text-[#0f1222]' : 'text-[#8a90a2]'
+            step === 'paste' ? 'text-ink' : 'text-ink-faint'
           }`}
         >
           1. Paste
@@ -287,7 +287,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
         <span className="text-[#e7e9ee]">—</span>
         <span
           className={`font-semibold transition-colors ${
-            step === 'review' ? 'text-[#0f1222]' : 'text-[#8a90a2]'
+            step === 'review' ? 'text-ink' : 'text-ink-faint'
           }`}
         >
           2. Review
@@ -295,7 +295,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
         <span className="text-[#e7e9ee]">—</span>
         <span
           className={`font-semibold transition-colors ${
-            step === 'saved' ? 'text-[#0f1222]' : 'text-[#8a90a2]'
+            step === 'saved' ? 'text-ink' : 'text-ink-faint'
           }`}
         >
           3. Saved
@@ -304,7 +304,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
 
       {/* Error alert banner */}
       {error && (
-        <div className="p-4 rounded-[6px] bg-[#fdf1f1] border border-[#d0272d]/30 text-[#d0272d] text-[14px] flex items-start gap-2.5">
+        <div className="p-4 rounded-[6px] bg-red-tint border border-red/30 text-red text-[14px] flex items-start gap-2.5">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <div className="flex-1">
             <span className="font-semibold">Error:</span> {error}
@@ -316,10 +316,10 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
       {step === 'paste' && (
         <div className="space-y-6 max-w-[800px]">
           <div>
-            <h1 className="text-[30px] font-bold text-[#0f1222] tracking-[-0.02em] leading-tight">
+            <h1 className="text-[30px] font-bold text-ink tracking-[-0.02em] leading-tight">
               New meeting
             </h1>
-            <p className="text-[13px] text-[#5e6477] mt-0.5">
+            <p className="text-[13px] text-ink-soft mt-0.5">
               Paste or upload a meeting transcript. Nirnay extracts decisions, tracks tasks, and checks previous memory for clashes.
             </p>
           </div>
@@ -327,7 +327,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
           {/* Title and Date Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2 space-y-1.5">
-              <label className="block text-[13px] font-medium text-[#0f1222]">
+              <label className="block text-[13px] font-medium text-ink">
                 Meeting title
               </label>
               <input
@@ -335,19 +335,19 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Sprint 24 Planning, Launch Sync"
-                className="w-full px-3 py-2 bg-white border border-[#cdd1da] focus:border-[#1e35c7] rounded-[6px] text-[14px] text-[#0f1222] placeholder-[#8a90a2]"
+                className="w-full px-3 py-2 bg-surface border border-line-strong focus:border-accent rounded-[6px] text-[14px] text-ink placeholder-[#8a90a2]"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[13px] font-medium text-[#0f1222]">
+              <label className="block text-[13px] font-medium text-ink">
                 Meeting date
               </label>
               <input
                 type="date"
                 value={meetingDate}
                 onChange={(e) => setMeetingDate(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-[#cdd1da] focus:border-[#1e35c7] rounded-[6px] text-[14px] text-[#0f1222] tabular-nums"
+                className="w-full px-3 py-2 bg-surface border border-line-strong focus:border-accent rounded-[6px] text-[14px] text-ink tabular-nums"
               />
             </div>
           </div>
@@ -355,10 +355,10 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
           {/* Transcript Textarea (Serif spoken voice) */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="block text-[13px] font-medium text-[#0f1222]">
+              <label className="block text-[13px] font-medium text-ink">
                 Meeting transcript
               </label>
-              <span className="text-[12px] text-[#8a90a2]">
+              <span className="text-[12px] text-ink-faint">
                 Supports English, Hindi, and Hinglish dialogue
               </span>
             </div>
@@ -367,7 +367,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
               placeholder="Paste dialogue here... e.g.&#10;Rahul: We should move the launch to 5 Feb.&#10;Amit: Main backend APIs 28 Dec tak complete kar dunga."
-              className="w-full p-4 bg-white border border-[#cdd1da] focus:border-[#1e35c7] rounded-[6px] font-serif text-[15.5px] leading-relaxed text-[#0f1222] placeholder-[#8a90a2]"
+              className="w-full p-4 bg-surface border border-line-strong focus:border-accent rounded-[6px] font-serif text-[15.5px] leading-relaxed text-ink placeholder-[#8a90a2]"
             />
           </div>
 
@@ -385,7 +385,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="px-3.5 py-2 rounded-[6px] text-[13px] font-medium bg-white hover:bg-[#f7f8fa] text-[#0f1222] border border-[#e7e9ee] transition-colors"
+                className="px-3.5 py-2 rounded-[6px] text-[13px] font-medium bg-surface hover:bg-fill text-ink border border-line transition-colors"
               >
                 Upload .txt
               </button>
@@ -393,11 +393,11 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
               {/* Demo selector dropdown */}
               {demoMeetings.length > 0 && (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[12px] text-[#8a90a2]">or demo:</span>
+                  <span className="text-[12px] text-ink-faint">or demo:</span>
                   <select
                     value={selectedDemoId}
                     onChange={(e) => handleSelectDemo(e.target.value)}
-                    className="px-2.5 py-1.5 rounded-[6px] text-[13px] font-medium bg-white border border-[#e7e9ee] text-[#0f1222] focus:border-[#1e35c7]"
+                    className="px-2.5 py-1.5 rounded-[6px] text-[13px] font-medium bg-surface border border-line text-ink focus:border-accent"
                   >
                     <option value="">Select demo meeting...</option>
                     {demoMeetings.map((dm) => (
@@ -416,7 +416,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
                 type="button"
                 onClick={handleAnalyze}
                 disabled={loading || !transcript.trim()}
-                className="px-5 py-2 rounded-[6px] text-[14px] font-semibold bg-[#1e35c7] hover:bg-[#172aa3] text-white disabled:opacity-50 transition-colors shadow-2xs"
+                className="px-5 py-2 rounded-[6px] text-[14px] font-semibold bg-accent hover:bg-accent-hover text-white disabled:opacity-50 transition-colors shadow-2xs"
               >
                 {loading ? (
                   <span>Reading the meeting... {elapsedSeconds}s</span>
@@ -432,18 +432,18 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
       {/* STEP 2: REVIEW (Left 62% + Right 38% Sticky Transcript + Sticky Decision Bar) */}
       {step === 'review' && proposal && (
         <div className="space-y-8">
-          <div className="flex items-baseline justify-between border-b border-[#e7e9ee] pb-3">
+          <div className="flex items-baseline justify-between border-b border-line pb-3">
             <div>
-              <h1 className="text-[22px] font-semibold text-[#0f1222]">
+              <h1 className="text-[22px] font-semibold text-ink">
                 Review record: {proposal.title}
               </h1>
-              <p className="text-[13px] text-[#5e6477] mt-0.5 tabular-nums">
+              <p className="text-[13px] text-ink-soft mt-0.5 tabular-nums">
                 {proposal.meeting_date} · Review extracted decisions, settle clashes, and approve.
               </p>
             </div>
             <button
               onClick={() => setStep('paste')}
-              className="text-[13px] text-[#5e6477] hover:text-[#0f1222]"
+              className="text-[13px] text-ink-soft hover:text-ink"
             >
               Edit transcript
             </button>
@@ -455,7 +455,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
               {/* 1. Conflicts (Bordered 10px panel, 3px red-pen left border) */}
               {(proposal.conflicts || []).length > 0 && (
                 <section className="space-y-4">
-                  <h2 className="text-[17px] font-semibold text-[#0f1222] flex items-center gap-2">
+                  <h2 className="text-[17px] font-semibold text-ink flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#d0272d]"></span>
                     <span>Conflicts to settle ({proposal.conflicts.length})</span>
                   </h2>
@@ -468,13 +468,13 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
                       return (
                         <div
                           key={idx}
-                          className="p-4 bg-white border border-[#e7e9ee] border-l-[3px] border-l-[#d0272d] rounded-[10px] space-y-3"
+                          className="p-4 bg-surface border border-line border-l-[3px] border-l-[#d0272d] rounded-[10px] space-y-3"
                         >
                           <div>
-                            <span className="text-[12px] font-medium text-[#d0272d]">
+                            <span className="text-[12px] font-medium text-red">
                               {conf.title}
                             </span>
-                            <p className="text-[14px] text-[#0f1222] mt-1 font-sans leading-relaxed">
+                            <p className="text-[14px] text-ink mt-1 font-sans leading-relaxed">
                               {conf.description}
                             </p>
                           </div>
@@ -486,8 +486,8 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
                                 onClick={() => handleConflictChoice(idx, 'kept_new')}
                                 className={`px-3 py-1.5 rounded-[6px] text-[13px] font-medium border transition-colors ${
                                   choice === 'kept_new'
-                                    ? 'bg-[#eef8f3] text-[#14795a] border-[#14795a]'
-                                    : 'bg-white text-[#0f1222] border-[#e7e9ee] hover:bg-[#f7f8fa]'
+                                    ? 'bg-green-tint text-green border-green'
+                                    : 'bg-surface text-ink border-line hover:bg-fill'
                                 }`}
                               >
                                 Keep the new one
@@ -497,14 +497,14 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
                                 onClick={() => handleConflictChoice(idx, 'kept_old')}
                                 className={`px-3 py-1.5 rounded-[6px] text-[13px] font-medium border transition-colors ${
                                   choice === 'kept_old'
-                                    ? 'bg-[#fff6e5] text-[#b26b00] border-[#b26b00]'
-                                    : 'bg-white text-[#0f1222] border-[#e7e9ee] hover:bg-[#f7f8fa]'
+                                    ? 'bg-amber-tint text-amber border-amber'
+                                    : 'bg-surface text-ink border-line hover:bg-fill'
                                 }`}
                               >
                                 Keep the old one
                               </button>
                               {!choice && (
-                                <span className="text-[12px] text-[#d0272d] font-medium">
+                                <span className="text-[12px] text-red font-medium">
                                   Action required
                                 </span>
                               )}
@@ -517,7 +517,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
                               <button
                                 type="button"
                                 onClick={() => handleConflictChoice(idx, 'acknowledged')}
-                                className="text-[12px] text-[#1e35c7] hover:underline"
+                                className="text-[12px] text-accent-text hover:underline"
                               >
                                 Acknowledge clash
                               </button>
@@ -533,11 +533,11 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
               {/* 2. Updates to Existing Tasks */}
               {(proposal.task_updates || []).length > 0 && (
                 <section className="space-y-3">
-                  <h2 className="text-[17px] font-semibold text-[#0f1222]">
+                  <h2 className="text-[17px] font-semibold text-ink">
                     Updates to existing tasks ({proposal.task_updates.length})
                   </h2>
 
-                  <div className="border-t border-b border-[#e7e9ee] divide-y divide-[#e7e9ee]">
+                  <div className="border-t border-b border-line divide-y divide-[#e7e9ee]">
                     {proposal.task_updates.map((tu) => {
                       const isIncluded = taskUpdatesIncluded[tu.task_id] !== false;
 
@@ -549,19 +549,19 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
                                 type="checkbox"
                                 checked={isIncluded}
                                 onChange={() => toggleTaskUpdate(tu.task_id)}
-                                className="rounded-[4px] border-[#cdd1da] text-[#1e35c7] focus:ring-0"
+                                className="rounded-[4px] border-line-strong text-accent-text focus:ring-0"
                               />
-                              <span className="font-semibold text-[#0f1222]">
+                              <span className="font-semibold text-ink">
                                 {tu.existing_task_title || `Task #${tu.task_id}`}
                               </span>
-                              <span className="text-[#8a90a2]">—</span>
+                              <span className="text-ink-faint">—</span>
                               {tu.new_status && (
-                                <span className="text-[13px] font-medium text-[#14795a]">
+                                <span className="text-[13px] font-medium text-green">
                                   Status → {tu.new_status}
                                 </span>
                               )}
                               {tu.new_deadline && (
-                                <span className="text-[13px] font-medium text-[#1e35c7] tabular-nums">
+                                <span className="text-[13px] font-medium text-accent-text tabular-nums">
                                   Deadline → {tu.new_deadline}
                                 </span>
                               )}
@@ -574,7 +574,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
                             <button
                               type="button"
                               onClick={() => setActiveQuote(tu.evidence_quote)}
-                              className="text-left w-full pl-6 text-[13px] font-serif italic text-[#5e6477] hover:text-[#0f1222]"
+                              className="text-left w-full pl-6 text-[13px] font-serif italic text-ink-soft hover:text-ink"
                             >
                               "{tu.evidence_quote}"
                             </button>
@@ -588,22 +588,22 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
 
               {/* 3. New Decisions (Ledger rows) */}
               <section className="space-y-3">
-                <h2 className="text-[17px] font-semibold text-[#0f1222]">
+                <h2 className="text-[17px] font-semibold text-ink">
                   New decisions ({proposal.decisions?.length || 0})
                 </h2>
 
-                <div className="border-t border-b border-[#e7e9ee] divide-y divide-[#e7e9ee]">
+                <div className="border-t border-b border-line divide-y divide-[#e7e9ee]">
                   {(proposal.decisions || []).map((dec, idx) => (
                     <div key={idx} className="py-3 space-y-1.5 text-[14px]">
                       <div className="flex items-baseline justify-between gap-4">
-                        <div className="w-36 shrink-0 font-medium text-[#0f1222]">
+                        <div className="w-36 shrink-0 font-medium text-ink">
                           {dec.topic?.replace(/_/g, ' ')}
                         </div>
                         <input
                           type="text"
                           value={dec.value}
                           onChange={(e) => updateDecisionField(idx, 'value', e.target.value)}
-                          className="flex-1 px-2 py-1 bg-white border border-transparent hover:border-[#e7e9ee] focus:border-[#1e35c7] rounded-[4px] font-semibold text-[#0f1222]"
+                          className="flex-1 px-2 py-1 bg-surface border border-transparent hover:border-line focus:border-accent rounded-[4px] font-semibold text-ink"
                         />
                         <ConfidenceMark score={dec.confidence_score || 0.95} />
                       </div>
@@ -612,7 +612,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
                         <button
                           type="button"
                           onClick={() => setActiveQuote(dec.evidence_quote)}
-                          className="text-left w-full pl-36 text-[13px] font-serif italic text-[#5e6477] hover:text-[#0f1222] truncate block"
+                          className="text-left w-full pl-36 text-[13px] font-serif italic text-ink-soft hover:text-ink truncate block"
                           title="Click to highlight in transcript"
                         >
                           "{dec.evidence_quote}"
@@ -625,11 +625,11 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
 
               {/* 4. New Tasks (Ledger rows with inline editable owner & deadline) */}
               <section className="space-y-3">
-                <h2 className="text-[17px] font-semibold text-[#0f1222]">
+                <h2 className="text-[17px] font-semibold text-ink">
                   New tasks ({proposal.tasks?.length || 0})
                 </h2>
 
-                <div className="border-t border-b border-[#e7e9ee] divide-y divide-[#e7e9ee]">
+                <div className="border-t border-b border-line divide-y divide-[#e7e9ee]">
                   {(proposal.tasks || []).map((task, idx) => {
                     const hasMissingOwner = !task.owner || task.owner.toLowerCase() === 'unassigned';
 
@@ -640,7 +640,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
                             type="text"
                             value={task.title}
                             onChange={(e) => updateTaskField(idx, 'title', e.target.value)}
-                            className="flex-1 min-w-[200px] px-2 py-1 bg-white border border-transparent hover:border-[#e7e9ee] focus:border-[#1e35c7] rounded-[4px] font-medium text-[#0f1222]"
+                            className="flex-1 min-w-[200px] px-2 py-1 bg-surface border border-transparent hover:border-line focus:border-accent rounded-[4px] font-medium text-ink"
                           />
 
                           <div className="flex items-center gap-3">
@@ -653,14 +653,14 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
                                   value={task.owner || ''}
                                   onChange={(e) => updateTaskField(idx, 'owner', e.target.value)}
                                   placeholder="Who owns this?"
-                                  className="w-28 text-[12px] font-medium text-[#b26b00] placeholder-[#b26b00] border-b border-[#b26b00] bg-transparent focus:outline-none"
+                                  className="w-28 text-[12px] font-medium text-amber placeholder-[#b26b00] border-b border-amber bg-transparent focus:outline-none"
                                 />
                               ) : (
                                 <input
                                   type="text"
                                   value={task.owner}
                                   onChange={(e) => updateTaskField(idx, 'owner', e.target.value)}
-                                  className="w-24 text-[13px] text-[#0f1222] font-medium border-b border-transparent hover:border-[#e7e9ee] focus:border-[#1e35c7] bg-transparent focus:outline-none"
+                                  className="w-24 text-[13px] text-ink font-medium border-b border-transparent hover:border-line focus:border-accent bg-transparent focus:outline-none"
                                 />
                               )}
                             </div>
@@ -670,7 +670,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
                               type="date"
                               value={task.deadline || ''}
                               onChange={(e) => updateTaskField(idx, 'deadline', e.target.value)}
-                              className="text-[12px] text-[#5e6477] border-b border-transparent hover:border-[#e7e9ee] focus:border-[#1e35c7] bg-transparent tabular-nums focus:outline-none"
+                              className="text-[12px] text-ink-soft border-b border-transparent hover:border-line focus:border-accent bg-transparent tabular-nums focus:outline-none"
                             />
 
                             <ConfidenceMark score={task.confidence_score || 0.9} />
@@ -681,7 +681,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
                           <button
                             type="button"
                             onClick={() => setActiveQuote(task.evidence_quote)}
-                            className="text-left text-[13px] font-serif italic text-[#5e6477] hover:text-[#0f1222] truncate block"
+                            className="text-left text-[13px] font-serif italic text-ink-soft hover:text-ink truncate block"
                             title="Click to highlight in transcript"
                           >
                             "{task.evidence_quote}"
@@ -704,14 +704,14 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
           </div>
 
           {/* STICKY DECISION BAR */}
-          <div className="fixed bottom-0 left-[248px] right-0 bg-white border-t border-[#e7e9ee] px-8 py-3.5 z-40 shadow-elevated flex items-center justify-between">
-            <div className="flex items-center gap-3 text-[14px] text-[#5e6477]">
+          <div className="fixed bottom-0 left-[248px] right-0 bg-surface border-t border-line px-8 py-3.5 z-40 shadow-elevated flex items-center justify-between">
+            <div className="flex items-center gap-3 text-[14px] text-ink-soft">
               {pendingConflictsCount > 0 ? (
-                <span className="font-semibold text-[#d0272d] tabular-nums">
+                <span className="font-semibold text-red tabular-nums">
                   {pendingConflictsCount} {pendingConflictsCount === 1 ? 'conflict' : 'conflicts'} left to settle
                 </span>
               ) : (
-                <span className="font-semibold text-[#14795a] flex items-center gap-1.5">
+                <span className="font-semibold text-green flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4" /> All conflicts settled
                 </span>
               )}
@@ -730,7 +730,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
               <button
                 type="button"
                 onClick={() => setStep('paste')}
-                className="px-4 py-2 rounded-[6px] text-[13px] font-medium bg-white hover:bg-[#f7f8fa] text-[#0f1222] border border-[#e7e9ee] transition-colors"
+                className="px-4 py-2 rounded-[6px] text-[13px] font-medium bg-surface hover:bg-fill text-ink border border-line transition-colors"
               >
                 Back
               </button>
@@ -739,7 +739,7 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
                 type="button"
                 onClick={handleConfirmAndSave}
                 disabled={saving || isConfirmDisabled}
-                className="px-5 py-2 rounded-[6px] text-[14px] font-semibold bg-[#1e35c7] hover:bg-[#172aa3] text-white disabled:opacity-40 transition-colors shadow-2xs flex items-center gap-2"
+                className="px-5 py-2 rounded-[6px] text-[14px] font-semibold bg-accent hover:bg-accent-hover text-white disabled:opacity-40 transition-colors shadow-2xs flex items-center gap-2"
                 title={isConfirmDisabled ? 'Settle all decision conflicts before approving' : undefined}
               >
                 {saving ? (
@@ -758,16 +758,16 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
         <div className="py-12 max-w-[640px] mx-auto text-center space-y-6">
           {/* Animated Stamp */}
           <div className="inline-block animate-stamp">
-            <div className="px-6 py-2 rounded-[8px] border-2 border-dashed border-[#14795a] text-[#14795a] font-bold text-[18px] tracking-wide uppercase select-none">
+            <div className="px-6 py-2 rounded-[8px] border-2 border-dashed border-green text-green font-bold text-[18px] tracking-wide uppercase select-none">
               Saved to memory
             </div>
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-[22px] font-bold text-[#0f1222]">
+            <h2 className="text-[22px] font-bold text-ink">
               {savedSummary.title}
             </h2>
-            <p className="text-[15px] text-[#5e6477] leading-relaxed tabular-nums">
+            <p className="text-[15px] text-ink-soft leading-relaxed tabular-nums">
               {savedSummary.decisionsSaved} decisions saved
               {savedSummary.conflictsLogged > 0 ? `, ${savedSummary.conflictsLogged} conflicts resolved` : ''} ·{' '}
               {savedSummary.tasksCreated} tasks created ·{' '}
@@ -778,13 +778,13 @@ export default function NewMeetingView({ onMeetingSaved, showToast }) {
           <div className="pt-4 flex items-center justify-center gap-3 flex-wrap">
             <button
               onClick={handleStartAnother}
-              className="px-4 py-2 rounded-[6px] text-[14px] font-semibold bg-[#1e35c7] hover:bg-[#172aa3] text-white transition-colors"
+              className="px-4 py-2 rounded-[6px] text-[14px] font-semibold bg-accent hover:bg-accent-hover text-white transition-colors"
             >
               Read another meeting
             </button>
             <button
               onClick={() => onMeetingSaved && onMeetingSaved()}
-              className="px-4 py-2 rounded-[6px] text-[14px] font-medium bg-white hover:bg-[#f7f8fa] text-[#0f1222] border border-[#e7e9ee] transition-colors"
+              className="px-4 py-2 rounded-[6px] text-[14px] font-medium bg-surface hover:bg-fill text-ink border border-line transition-colors"
             >
               Return to Today
             </button>

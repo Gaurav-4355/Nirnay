@@ -157,7 +157,7 @@ export default function OutboxView({ onStatsChanged, showToast }) {
     return (
       <div
         key={item.id}
-        className="bg-white border border-stone-200 rounded-xl p-4 shadow-2xs space-y-3 transition-all"
+        className="bg-surface border border-stone-200 rounded-xl p-4 shadow-2xs space-y-3 transition-all"
       >
         {/* Header & Badges */}
         <div className="flex items-start justify-between gap-3">
@@ -190,7 +190,7 @@ export default function OutboxView({ onStatsChanged, showToast }) {
                 <button
                   onClick={() => handleReject(item.id)}
                   disabled={isLoading}
-                  className="px-2.5 py-1 text-xs font-medium rounded-lg border border-stone-200 bg-white hover:bg-red-50 text-stone-600 hover:text-red-700 transition-colors"
+                  className="px-2.5 py-1 text-xs font-medium rounded-lg border border-stone-200 bg-surface hover:bg-red-50 text-stone-600 hover:text-red-700 transition-colors"
                 >
                   Reject
                 </button>
@@ -274,7 +274,7 @@ export default function OutboxView({ onStatsChanged, showToast }) {
               onClick={() => setActiveTab('pending')}
               className={`px-3 py-1.5 rounded-md font-medium transition-all ${
                 activeTab === 'pending'
-                  ? 'bg-white text-stone-900 shadow-2xs font-semibold'
+                  ? 'bg-surface text-stone-900 shadow-2xs font-semibold'
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
@@ -284,7 +284,7 @@ export default function OutboxView({ onStatsChanged, showToast }) {
               onClick={() => setActiveTab('history')}
               className={`px-3 py-1.5 rounded-md font-medium transition-all ${
                 activeTab === 'history'
-                  ? 'bg-white text-stone-900 shadow-2xs font-semibold'
+                  ? 'bg-surface text-stone-900 shadow-2xs font-semibold'
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
@@ -377,7 +377,7 @@ export default function OutboxView({ onStatsChanged, showToast }) {
             description="Items that you approve or reject will appear in this audit log."
           />
         ) : (
-          <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-2xs divide-y divide-stone-100">
+          <div className="bg-surface border border-stone-200 rounded-xl overflow-hidden shadow-2xs divide-y divide-stone-100">
             {historyItems.map((item) => (
               <div key={item.id} className="p-4 flex items-center justify-between gap-4 text-xs hover:bg-stone-50/70 transition-colors">
                 <div className="space-y-0.5 max-w-xl">
