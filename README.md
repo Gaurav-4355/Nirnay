@@ -2,7 +2,7 @@
 > *"Meeting ke faisle, kaam mein badlo."*
 > An AI agent that turns meeting talk into tracked, conflict-checked action, with a human approving every step.
 
-[Live Demo](<LIVE_DEMO_URL>) | [Demo Video](<VIDEO_URL>) | [LinkedIn Post](<LINKEDIN_POST_URL>) | [Source Code](<SOURCE_CODE_URL>)
+[Live Demo](<https://frontend-sigma-dun-82.vercel.app/>) | [Demo Video](<https://www.loom.com/share/2a3563aed0094da48ae3df76aec4d1a8>) |  
 
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.0.0-lightgrey.svg)](https://fastapi.tiangolo.com/)
