@@ -4,9 +4,9 @@ Karan: Aur QA testing tabhi meaningful hogi jab APIs stable hongi.
 Rahul: Considering the technical debt and holiday season, we cannot launch on 15 Jan 2027 without risking outages.
 Sneha: Pushing the launch gives us extra runway for product hunt launch preparation too.
 Rahul: Yes. Final decision: Launch date is officially postponed to 5 Feb 2027.
-Amit: That gives backend much needed breathing room. Main backend core APIs and auth integration 28 Dec 2026 tak complete kar paunga.
-Rahul: Understood, Amit will deliver core backend APIs by 28 Dec 2026.
-Karan: Mujhe end-to-end regression aur integration testing complete karni hai by 22 Dec 2026 so management can review QA report before Christmas.
+Amit: Main core REST API endpoints aur database setup ki deadline 20 Dec se badhakar 28 Dec 2026 kar raha hoon, tak complete kar paunga.
+Rahul: Understood, Amit's core backend API deadline moves from 20 Dec to 28 Dec 2026.
+Karan: Mujhe end-to-end regression aur integration testing 22 Dec 2026 tak complete karni hai, ye Amit ke backend APIs par depend karti hai.
 Rahul: Theek hai, Karan will finish QA integration testing by 22 Dec 2026.
 Priya: Rahul, design side pe kaafi pending requests hain, what should I pick up this week?
 Rahul: Priya, we need you to deliver these 5 design deliverables this coming week before Christmas break:

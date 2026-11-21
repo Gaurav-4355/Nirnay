@@ -30,7 +30,7 @@
           "title": "Complete backend REST API endpoints and database setup",
           "owner": "Amit",
           "deadline": "2026-12-20",
-          "evidence_quote": "Main core REST API endpoints and database setup 20 Dec 2026 tak pura kar dunga.",
+          "evidence_quote": "main core REST API endpoints and database setup 20 Dec 2026 tak pura kar dunga.",
           "needs_clarification": false
         },
         {
@@ -93,7 +93,7 @@
           "title": "Update pricing page to Rs 599",
           "owner": "Priya",
           "deadline": "2026-12-14",
-          "evidence_quote": "Main pricing page pe Rs 599 update kar dungi 14 Dec 2026 tak."
+          "evidence_quote": "main pricing page pe Rs 599 update kar dungi 14 Dec 2026 tak."
         },
         {
           "title": "Wrap up auth service and token refresh",
@@ -133,7 +133,7 @@
           "title_keyword": "backend",
           "new_status": null,
           "new_deadline": "2026-12-28",
-          "evidence_quote": "Main backend core APIs and auth integration 28 Dec 2026 tak complete kar paunga."
+          "evidence_quote": "Main core REST API endpoints aur database setup ki deadline 20 Dec se badhakar 28 Dec 2026 kar raha hoon, tak complete kar paunga."
         }
       ],
       "expected_tasks": [
@@ -141,7 +141,7 @@
           "title": "Finish end-to-end regression and integration testing",
           "owner": "Karan",
           "deadline": "2026-12-22",
-          "evidence_quote": "Mujhe end-to-end regression aur integration testing complete karni hai by 22 Dec 2026",
+          "evidence_quote": "Mujhe end-to-end regression aur integration testing 22 Dec 2026 tak complete karni hai, ye Amit ke backend APIs par depend karti hai.",
           "depends_on": "Amit's backend work"
         },
         {

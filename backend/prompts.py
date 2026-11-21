@@ -54,7 +54,26 @@ CRITICAL RULES:
      - If the dependency is on another new task in this same `tasks` list, set `depends_on_new_task_index` to its 0-based index in the `tasks` array and `depends_on_existing_task_id` to null.
      - If there is no explicit dependency, both must be null.
 
-5. Output Format:
+5. EXAMPLES (illustrative only - NEVER copy names, topics, or IDs from these examples into your output):
+
+   a) Deadline slip:
+      - Given an existing task in EXISTING_OPEN_TASKS: id 12 "Build login page", owner "Dev", deadline "2026-11-30"
+      - Transcript: "Dev: login page 30 Nov ki jagah 5 Dec tak karunga"
+      - Output: In `task_updates`, output ONE update: {"task_id": 12, "new_status": null, "new_deadline": "2026-12-05", "evidence_quote": "login page 30 Nov ki jagah 5 Dec tak karunga", "confidence": 0.95}. Do NOT create any new task in `tasks`.
+
+   b) Open ownership:
+      - Transcript: "Lead: someone should set up error monitoring, we will decide who later"
+      - Output: In `tasks`, output a NEW task: {"title": "Set up error monitoring", "owner": null, "deadline": null, "needs_clarification": true, "clarification_question": "Who will own this and by when?", "evidence_quote": "someone should set up error monitoring, we will decide who later", "confidence": 0.9, "depends_on_existing_task_id": null, "depends_on_new_task_index": null}. Never skip tasks just because nobody owns them yet.
+
+   c) Dependency on an existing task:
+      - Given an existing task in EXISTING_OPEN_TASKS: id 7 "Finish payment API", owner "Ravi"
+      - Transcript: "Mina: mera checkout testing Ravi ke payment API par depend karta hai, 3 Dec tak karungi"
+      - Output: In `tasks`, output a NEW task for Mina with `depends_on_existing_task_id`: 7.
+
+   d) Same work, new wording:
+      - If a speaker restates or reschedules work that matches an EXISTING open task by the SAME owner (even with different wording or a slightly wider scope), it is a task_update, not a new task.
+
+6. Output Format:
    Return strict JSON matching this exact structure:
    {
      "decisions": [

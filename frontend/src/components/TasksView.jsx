@@ -32,7 +32,12 @@ export default function TasksView({ showToast }) {
 
   const fetchTasks = (owner = '') => {
     setLoading(true);
-    const url = owner ? `/api/tasks?owner=${encodeURIComponent(owner)}` : '/api/tasks';
+    let url = '/api/tasks';
+    if (owner === '__unassigned__') {
+      url = '/api/tasks?owner=unassigned';
+    } else if (owner) {
+      url = `/api/tasks?owner=${encodeURIComponent(owner)}`;
+    }
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
@@ -64,6 +69,8 @@ export default function TasksView({ showToast }) {
         .filter((o) => o && o.trim())
     )
   ).sort();
+
+  const unassignedCount = tasks.filter((t) => !t.owner || !t.owner.trim()).length;
 
   const handleStatusChange = async (taskId, newStatus) => {
     const originalTask = tasks.find((t) => t.id === taskId);
@@ -138,7 +145,7 @@ export default function TasksView({ showToast }) {
   };
 
   const getOwnerColor = (name) => {
-    if (!name) return 'bg-slate-800 text-slate-300 border-slate-700';
+    if (!name) return 'bg-amber-950/80 text-amber-300 border-amber-800/80';
     const colorPairs = [
       'bg-indigo-950 text-indigo-300 border-indigo-700',
       'bg-purple-950 text-purple-300 border-purple-700',
@@ -188,10 +195,12 @@ export default function TasksView({ showToast }) {
 
   const filteredTasks = tasks.filter((t) => {
     if (statusFilter && t.status !== statusFilter) return false;
+    if (ownerFilter === '__unassigned__' && t.owner && t.owner.trim()) return false;
+    if (ownerFilter && ownerFilter !== '__unassigned__' && t.owner !== ownerFilter) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchTitle = t.title.toLowerCase().includes(q);
-      const matchOwner = (t.owner || '').toLowerCase().includes(q);
+      const matchOwner = (t.owner || 'unassigned').toLowerCase().includes(q);
       const matchMeeting = (t.meeting_title || '').toLowerCase().includes(q);
       const matchDep = (t.depends_on_title || '').toLowerCase().includes(q);
       return matchTitle || matchOwner || matchMeeting || matchDep;
@@ -292,6 +301,18 @@ export default function TasksView({ showToast }) {
             </button>
           );
         })}
+        {unassignedCount > 0 && (
+          <button
+            onClick={() => setOwnerFilter(ownerFilter === '__unassigned__' ? '' : '__unassigned__')}
+            className={`px-3 py-1 rounded-xl font-semibold transition-all flex items-center gap-1 ${
+              ownerFilter === '__unassigned__'
+                ? 'bg-amber-600 text-white shadow-md shadow-amber-950 font-bold'
+                : 'bg-slate-900 text-amber-400/90 hover:bg-slate-800 hover:text-amber-300 border border-slate-800'
+            }`}
+          >
+            <span>Unassigned ({unassignedCount})</span>
+          </button>
+        )}
       </div>
 
       {/* Main Board vs Table Area */}
@@ -366,16 +387,25 @@ export default function TasksView({ showToast }) {
                         {/* Owner Badge & Deadlines */}
                         <div className="flex items-center justify-between gap-2 text-xs pt-1 border-t border-slate-800/60 flex-wrap">
                           <div className="flex items-center gap-1.5">
-                            <span
-                              className={`w-6 h-6 rounded-lg text-[10px] font-bold border flex items-center justify-center ${getOwnerColor(
-                                task.owner
-                              )}`}
-                            >
-                              {(task.owner || 'U').slice(0, 2).toUpperCase()}
-                            </span>
-                            <span className="text-[11px] font-medium text-slate-300">
-                              @{task.owner || 'Unassigned'}
-                            </span>
+                            {task.owner ? (
+                              <>
+                                <span
+                                  className={`w-6 h-6 rounded-lg text-[10px] font-bold border flex items-center justify-center ${getOwnerColor(
+                                    task.owner
+                                  )}`}
+                                >
+                                  {task.owner.slice(0, 2).toUpperCase()}
+                                </span>
+                                <span className="text-[11px] font-medium text-slate-300">
+                                  @{task.owner}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-950/80 text-amber-300 border border-amber-800/80 flex items-center gap-1">
+                                <User className="w-3 h-3 text-amber-400" />
+                                Unassigned
+                              </span>
+                            )}
                           </div>
 
                           <div>{getDeadlineBadge(task.deadline, task.status)}</div>
@@ -481,9 +511,16 @@ export default function TasksView({ showToast }) {
               <div className="flex items-center gap-4 text-xs flex-wrap pt-2 border-t border-slate-800/80">
                 <div className="flex items-center gap-1.5">
                   <span className="text-slate-500">Owner:</span>
-                  <span className={`font-semibold px-2 py-0.5 rounded-md ${getOwnerColor(task.owner)}`}>
-                    @{task.owner || 'Unassigned'}
-                  </span>
+                  {task.owner ? (
+                    <span className={`font-semibold px-2 py-0.5 rounded-md ${getOwnerColor(task.owner)}`}>
+                      @{task.owner}
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-950/80 text-amber-300 border border-amber-800/80 flex items-center gap-1">
+                      <User className="w-3 h-3 text-amber-400" />
+                      Unassigned
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-slate-500">Deadline:</span>

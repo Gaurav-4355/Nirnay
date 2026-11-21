@@ -390,7 +390,10 @@ def list_tasks(owner: Optional[str] = Query(None), db: Session = Depends(get_db)
         .join(Meeting, Task.meeting_id == Meeting.id)
     )
     if owner and owner.strip():
-        query = query.filter(Task.owner.ilike(f"%{owner.strip()}%"))
+        if owner.strip().lower() in ("unassigned", "none", "null", "__unassigned__"):
+            query = query.filter((Task.owner == None) | (Task.owner == ""))
+        else:
+            query = query.filter(Task.owner.ilike(f"%{owner.strip()}%"))
 
     tasks_with_meetings = query.order_by(Task.deadline.asc().nullslast(), Task.id.asc()).all()
 

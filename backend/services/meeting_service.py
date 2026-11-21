@@ -1,5 +1,6 @@
+import re
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Set, Tuple
 from sqlalchemy.orm import Session
 from pydantic import ValidationError
 
@@ -18,6 +19,135 @@ from .quote_matcher import find_quote_span
 from .conflicts import detect_conflicts
 from .outbox_service import queue_tracker_create, queue_tracker_update
 
+STOP_WORDS = {
+    "a", "an", "the", "and", "or", "for", "to", "in", "on", "at", "by", "of", "with",
+    "is", "are", "aur", "ki", "ka", "ke", "ko", "se", "tak", "mein", "par", "hai", "hain",
+    "task", "deliver", "complete", "finish", "setup", "kar", "karna", "karni", "karunga", "karenge"
+}
+
+
+def extract_transcript_speakers(transcript: str) -> Set[str]:
+    """
+    Extracts speaker names from transcript lines starting with 'SpeakerName:' or 'Speaker Name:'.
+    Returns a set of lowercase speaker names.
+    """
+    speakers = set()
+    for line in (transcript or "").splitlines():
+        line = line.strip()
+        m = re.match(r"^([A-Za-z0-9_\-\s]{1,40}):", line)
+        if m:
+            spk = m.group(1).strip()
+            if spk:
+                speakers.add(spk.lower())
+    return speakers
+
+
+def check_owner_guard(
+    raw_owner: Optional[str],
+    task_title: str,
+    speakers: Set[str],
+    existing_clar_question: Optional[str] = None,
+) -> Tuple[Optional[str], bool, Optional[str]]:
+    """
+    Checks task owner against transcript speakers.
+    Returns (cleaned_owner, needs_clarification, clarification_question).
+    If owner is not in speakers (case-insensitive), sets owner to None,
+    needs_clarification to True, and adds a clarification question.
+    """
+    if not raw_owner or raw_owner.strip().lower() in ("null", "none", "unassigned", "unclear"):
+        clar_q = existing_clar_question or f"Who will take ownership of '{task_title}'?"
+        return None, True, clar_q
+
+    clean_owner = raw_owner.strip()
+    owner_lower = clean_owner.lower()
+
+    if speakers:
+        is_speaker = any(
+            owner_lower == s or owner_lower in s.split() or s in owner_lower.split()
+            for s in speakers
+        )
+        if not is_speaker:
+            clar_q = existing_clar_question or f"Who will take ownership of '{task_title}'? '{clean_owner}' is not a recognized speaker."
+            return None, True, clar_q
+
+    return clean_owner, False, existing_clar_question
+
+
+def _tokenize_title(title: str) -> Set[str]:
+    words = re.findall(r"\w+", (title or "").lower())
+    return {w for w in words if len(w) > 2 and w not in STOP_WORDS}
+
+
+def apply_duplicate_guard(
+    tasks: List[ProposalTask],
+    task_updates: List[ProposalTaskUpdate],
+) -> List[ProposalTask]:
+    """
+    If the same output has both a task_update for an existing task AND a new task
+    with the same owner and the same deadline as that update's new_deadline
+    and overlapping title words, drop the duplicate new task.
+    """
+    if not task_updates or not tasks:
+        return tasks
+
+    filtered_tasks = []
+    dropped_indices = set()
+
+    for idx, t in enumerate(tasks):
+        is_dup = False
+        t_owner = (t.owner or "").strip().lower()
+        t_deadline = (t.deadline or "").strip()
+        t_words = _tokenize_title(t.title)
+
+        for tu in task_updates:
+            tu_owner = (tu.owner or "").strip().lower()
+            tu_new_deadline = (tu.new_deadline or "").strip()
+
+            if t_owner and tu_owner and t_owner == tu_owner:
+                if tu_new_deadline and t_deadline == tu_new_deadline:
+                    tu_words = _tokenize_title(tu.task_title)
+                    if t_words and tu_words and (t_words & tu_words):
+                        is_dup = True
+                        dropped_indices.add(idx)
+                        break
+
+        if not is_dup:
+            filtered_tasks.append(t)
+
+    # Remap dependencies if any dropped task was referenced
+    if dropped_indices:
+        index_map = {}
+        new_i = 0
+        for old_i in range(len(tasks)):
+            if old_i in dropped_indices:
+                index_map[old_i] = None
+            else:
+                index_map[old_i] = new_i
+                new_i += 1
+
+        for t in filtered_tasks:
+            if t.depends_on_new_task_index is not None:
+                mapped = index_map.get(t.depends_on_new_task_index)
+                if mapped is not None:
+                    t.depends_on_new_task_index = mapped
+                else:
+                    # Depended on the dropped duplicate! Link to the update's existing task
+                    dropped_old_idx = t.depends_on_new_task_index
+                    dropped_task = tasks[dropped_old_idx]
+                    for tu in task_updates:
+                        if (
+                            (tu.owner or "").strip().lower() == (dropped_task.owner or "").strip().lower()
+                            and (tu.new_deadline or "").strip() == (dropped_task.deadline or "").strip()
+                        ):
+                            t.depends_on_existing_task_id = tu.task_id
+                            t.depends_on_title = tu.task_title
+                            t.depends_on_new_task_index = None
+                            break
+                    if t.depends_on_new_task_index is not None:
+                        t.depends_on_new_task_index = None
+
+    return filtered_tasks
+
 
 def analyze_meeting(
     db: Session,
@@ -27,6 +157,7 @@ def analyze_meeting(
     ignore_demo_fallback: bool = False,
 ) -> MeetingAnalyzeResponse:
     # 1. Load existing open tasks and active decisions from DB
+    speakers = extract_transcript_speakers(transcript)
     open_tasks_db = (
         db.query(Task)
         .filter(Task.status.in_(["pending", "blocked"]))
@@ -128,14 +259,12 @@ def analyze_meeting(
             if not clar_question:
                 clar_question = "Evidence quote was not found directly in transcript; please verify details."
 
-        # Owner validation
-        if not t.owner or t.owner.strip().lower() in ("null", "none", "unassigned", "unclear"):
-            owner = None
+        # Owner validation & speaker guard (converts invented owners to null with clarification)
+        owner, owner_needs_clar, clar_question = check_owner_guard(
+            t.owner, t.title, speakers, clar_question
+        )
+        if owner_needs_clar:
             needs_clar = True
-            if not clar_question:
-                clar_question = f"Who will take ownership of '{t.title}'?"
-        else:
-            owner = t.owner.strip()
 
         # Deadline validation
         deadline = t.deadline.strip() if t.deadline else None
@@ -218,6 +347,9 @@ def analyze_meeting(
                 included=True,
             )
         )
+
+    # Apply duplicate guard (drops duplicate new tasks when an update already exists)
+    tasks = apply_duplicate_guard(tasks, task_updates)
 
     # 8. Detect Conflicts (plain Python, no LLM)
     conflicts = detect_conflicts(

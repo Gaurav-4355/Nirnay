@@ -1,6 +1,6 @@
 {
   "summary": {
-    "overall_recall": 95.8,
+    "overall_recall": 92.6,
     "evidence_validity": 100.0,
     "no_guess_rate": 100.0,
     "decisions": {
@@ -20,9 +20,9 @@
     "task_updates": {
       "expected": 3,
       "found": 3,
-      "correct": 3,
-      "precision": 100.0,
-      "recall": 100.0
+      "correct": 2,
+      "precision": 66.7,
+      "recall": 66.7
     },
     "conflicts": {
       "expected": 4,
@@ -91,11 +91,35 @@
       "tasks": {
         "expected": 4,
         "found": 4,
-        "correct": 4,
-        "precision": 1.0,
-        "recall": 1.0,
-        "missed": [],
-        "extra": []
+        "correct": 3,
+        "precision": 0.75,
+        "recall": 0.75,
+        "missed": [
+          {
+            "title": "Payment gateway integration",
+            "owner": "Amit",
+            "status": "blocked",
+            "evidence_quote": "payment gateway integration is blocked."
+          }
+        ],
+        "extra": [
+          {
+            "title": "Call Razorpay account manager to resolve KYC",
+            "owner": "Rahul",
+            "deadline": null,
+            "status": "pending",
+            "evidence_quote": "Main unke account manager ko call karta hoon.",
+            "confidence": 0.94,
+            "needs_clarification": true,
+            "clarification_question": "When should the call be made and by when should the KYC be resolved?",
+            "depends_on_task_id": null,
+            "depends_on_existing_task_id": null,
+            "depends_on_new_task_index": null,
+            "depends_on_title": null,
+            "quote_start": 853,
+            "quote_end": 898
+          }
+        ]
       },
       "task_updates": {
         "expected": 2,
@@ -133,32 +157,42 @@
       "tasks": {
         "expected": 7,
         "found": 7,
-        "correct": 6,
-        "precision": 0.857,
-        "recall": 0.857,
-        "missed": [
-          {
-            "title": "In-app iconography refresh for dark mode",
-            "owner": "Priya",
-            "deadline": "2026-12-25"
-          }
-        ],
-        "extra": [
-          {
-            "title": "Refresh all in-app dark mode SVG icons",
-            "owner": "Priya",
-            "deadline": "2026-12-25"
-          }
-        ]
-      },
-      "task_updates": {
-        "expected": 1,
-        "found": 1,
-        "correct": 1,
+        "correct": 7,
         "precision": 1.0,
         "recall": 1.0,
         "missed": [],
         "extra": []
+      },
+      "task_updates": {
+        "expected": 1,
+        "found": 1,
+        "correct": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "missed": [
+          {
+            "title_keyword": "backend",
+            "new_status": null,
+            "new_deadline": "2026-12-28",
+            "evidence_quote": "Main core REST API endpoints aur database setup ki deadline 20 Dec se badhakar 28 Dec 2026 kar raha hoon, tak complete kar paunga."
+          }
+        ],
+        "extra": [
+          {
+            "task_id": 2,
+            "task_title": "Develop core REST API endpoints and database setup",
+            "owner": "Amit",
+            "old_status": "pending",
+            "new_status": null,
+            "old_deadline": "2026-12-20",
+            "new_deadline": "2026-12-28",
+            "evidence_quote": "Amit: Main core REST API endpoints aur database setup ki deadline 20 Dec se badhakar 28 Dec 2026 kar raha hoon, tak complete kar paunga.",
+            "confidence": 0.95,
+            "quote_start": 544,
+            "quote_end": 680,
+            "included": true
+          }
+        ]
       },
       "conflicts": {
         "expected": 3,
@@ -172,6 +206,6 @@
       "clarification_score": 100.0
     }
   ],
-  "evaluated_at": "2026-11-21T18:00:00.000Z",
+  "evaluated_at": "2026-11-21T16:19:02.650198",
   "snapshot": true
 }
