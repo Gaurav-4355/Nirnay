@@ -3,7 +3,6 @@ import {
   Send,
   CheckCircle2,
   XCircle,
-  Clock,
   AlertTriangle,
   Bell,
   Kanban,
@@ -13,27 +12,34 @@ import {
   X,
   RefreshCw,
   CheckCheck,
-  ShieldAlert,
   Info,
+  Clock,
 } from 'lucide-react';
+import StampBadge from '../ui/StampBadge';
+import LoadingSkeleton from '../ui/LoadingSkeleton';
+import EmptyState from '../ui/EmptyState';
+import ErrorAlert from '../ui/ErrorAlert';
 
-export default function OutboxView({ onStatsChanged }) {
+export default function OutboxView({ onStatsChanged, showToast }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'history'
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editBody, setEditBody] = useState('');
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [approvingAll, setApprovingAll] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [scanMessage, setScanMessage] = useState(null);
   const [integrations, setIntegrations] = useState({ trello: false, webhook: false });
 
   const fetchItems = () => {
     setLoading(true);
+    setErrorMsg(null);
     fetch('/api/outbox')
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load approval items');
+        return res.json();
+      })
       .then((data) => {
         setItems(Array.isArray(data) ? data : []);
         setLoading(false);
@@ -41,13 +47,14 @@ export default function OutboxView({ onStatsChanged }) {
       })
       .catch((err) => {
         console.error('Error fetching outbox:', err);
+        setErrorMsg('Unable to retrieve approval gateway items.');
         setLoading(false);
       });
   };
 
   const fetchIntegrations = () => {
     fetch('/api/integrations/status')
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : {}))
       .then((data) => setIntegrations(data))
       .catch(() => {});
   };
@@ -59,6 +66,12 @@ export default function OutboxView({ onStatsChanged }) {
 
   const pendingItems = items.filter((i) => i.status === 'pending');
   const historyItems = items.filter((i) => i.status !== 'pending');
+
+  const trackerCards = pendingItems.filter(
+    (i) => i.kind === 'tracker_create' || i.kind === 'tracker_update'
+  );
+  const reminders = pendingItems.filter((i) => i.kind === 'reminder');
+  const weeklySummaries = pendingItems.filter((i) => i.kind === 'digest');
 
   const handleStartEdit = (item) => {
     setEditingId(item.id);
@@ -83,6 +96,7 @@ export default function OutboxView({ onStatsChanged }) {
         const updated = await res.json();
         setItems((prev) => prev.map((i) => (i.id === id ? updated : i)));
         setEditingId(null);
+        if (showToast) showToast('Item updated successfully.', 'info');
       }
     } catch (err) {
       console.error('Error updating outbox item:', err);
@@ -95,6 +109,7 @@ export default function OutboxView({ onStatsChanged }) {
       const res = await fetch(`/api/outbox/${id}/approve`, { method: 'POST' });
       if (res.ok) {
         fetchItems();
+        if (showToast) showToast('Item approved and dispatched.', 'success');
       }
     } catch (err) {
       console.error('Error approving item:', err);
@@ -109,6 +124,7 @@ export default function OutboxView({ onStatsChanged }) {
       const res = await fetch(`/api/outbox/${id}/reject`, { method: 'POST' });
       if (res.ok) {
         fetchItems();
+        if (showToast) showToast('Item rejected.', 'info');
       }
     } catch (err) {
       console.error('Error rejecting item:', err);
@@ -118,11 +134,13 @@ export default function OutboxView({ onStatsChanged }) {
   };
 
   const handleApproveAll = async () => {
+    if (pendingItems.length === 0) return;
     setApprovingAll(true);
     try {
       const res = await fetch('/api/outbox/approve-all', { method: 'POST' });
       if (res.ok) {
         fetchItems();
+        if (showToast) showToast(`Approved all ${pendingItems.length} items.`, 'success');
       }
     } catch (err) {
       console.error('Error approving all items:', err);
@@ -131,396 +149,250 @@ export default function OutboxView({ onStatsChanged }) {
     }
   };
 
-  const handleScanReminders = async () => {
-    setScanning(true);
-    setScanMessage(null);
-    try {
-      const res = await fetch('/api/reminders/scan', { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        setScanMessage(
-          `Scan complete for ${data.today}: ${data.new_reminders_queued} new reminder(s) queued (${data.scanned_tasks_count} tasks evaluated).`
-        );
-        fetchItems();
-      }
-    } catch (err) {
-      console.error('Error scanning reminders:', err);
-    } finally {
-      setScanning(false);
-    }
-  };
+  // Render individual message preview card
+  const renderItemCard = (item) => {
+    const isEditing = editingId === item.id;
+    const isLoading = actionLoadingId === item.id;
 
-  const getKindBadge = (kind) => {
-    switch (kind) {
-      case 'tracker_create':
-        return (
-          <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-700/60 flex items-center gap-1">
-            <Kanban className="w-3 h-3 text-indigo-400" />
-            Create Card
-          </span>
-        );
-      case 'tracker_update':
-        return (
-          <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-950/80 text-blue-300 border border-blue-700/60 flex items-center gap-1">
-            <RefreshCw className="w-3 h-3 text-blue-400" />
-            Update Card
-          </span>
-        );
-      case 'reminder':
-        return (
-          <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-950/80 text-amber-300 border border-amber-700/60 flex items-center gap-1">
-            <Bell className="w-3 h-3 text-amber-400" />
-            Reminder
-          </span>
-        );
-      case 'digest':
-        return (
-          <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-purple-950/80 text-purple-300 border border-purple-700/60 flex items-center gap-1">
-            <FileText className="w-3 h-3 text-purple-400" />
-            Weekly Digest
-          </span>
-        );
-      default:
-        return (
-          <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-800 text-slate-300">
-            {kind}
-          </span>
-        );
-    }
+    return (
+      <div
+        key={item.id}
+        className="bg-white border border-stone-200 rounded-xl p-4 shadow-2xs space-y-3 transition-all"
+      >
+        {/* Header & Badges */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-stone-100 text-stone-700 border border-stone-200">
+                {item.target === 'trello' ? 'Trello card' : 'Webhook payload'}
+              </span>
+              {item.recipient && (
+                <span className="text-xs text-stone-500 font-medium">To: @{item.recipient}</span>
+              )}
+            </div>
+            {!isEditing && (
+              <h4 className="text-xs font-bold text-stone-900 mt-1">{item.title}</h4>
+            )}
+          </div>
+
+          {/* Action buttons (Edit, Approve, Reject) */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {!isEditing && (
+              <>
+                <button
+                  onClick={() => handleStartEdit(item)}
+                  disabled={isLoading}
+                  className="p-1 text-stone-400 hover:text-stone-700 rounded transition-colors"
+                  title="Edit message content"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleReject(item.id)}
+                  disabled={isLoading}
+                  className="px-2.5 py-1 text-xs font-medium rounded-lg border border-stone-200 bg-white hover:bg-red-50 text-stone-600 hover:text-red-700 transition-colors"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={() => handleApprove(item.id)}
+                  disabled={isLoading}
+                  className="px-3 py-1 text-xs font-medium rounded-lg bg-stone-900 hover:bg-stone-800 text-white shadow-2xs transition-colors flex items-center gap-1"
+                >
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  <span>{isLoading ? 'Sending...' : 'Approve'}</span>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Editing mode or Message preview */}
+        {isEditing ? (
+          <div className="space-y-2 pt-1 border-t border-stone-100">
+            <div>
+              <label className="text-[10px] text-stone-500 font-medium">Title</label>
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full bg-stone-50 border border-stone-200 rounded px-2.5 py-1.5 text-xs text-stone-900 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-stone-500 font-medium">Message Body</label>
+              <textarea
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value)}
+                rows={4}
+                className="w-full bg-stone-50 border border-stone-200 rounded px-2.5 py-1.5 text-xs text-stone-900 font-sans focus:outline-none"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                onClick={handleCancelEdit}
+                className="px-2.5 py-1 text-xs text-stone-600 hover:text-stone-900 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleSaveEdit(item.id)}
+                className="px-3 py-1 bg-stone-900 text-white text-xs font-medium rounded-lg flex items-center gap-1"
+              >
+                <Save className="w-3 h-3" />
+                <span>Save</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-[#f7f6f2] p-3 rounded-lg border border-stone-200 text-xs text-stone-700 whitespace-pre-wrap font-sans leading-relaxed">
+            {item.body || 'No description body.'}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-8 max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-4 pb-4 border-b border-stone-200">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Send className="w-6 h-6 text-indigo-400" />
-            Outbox & Execution Gateway
+          <h2 className="text-xl font-bold tracking-tight text-stone-900 flex items-center gap-2">
+            <Send className="w-5 h-5 text-stone-700" />
+            Waiting for Your Approval
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Review and dispatch outward tracker cards, automated reminders, and team digests.
+          <p className="text-xs text-stone-500 mt-1">
+            Nothing leaves the system without human verification. Review card creations, reminders, and weekly digests before sending.
           </p>
         </div>
 
-        {/* Global Action Buttons */}
+        {/* Tab Toggle & Approve All button */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleScanReminders}
-            disabled={scanning}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 transition-all shadow-sm"
-            title="Scan tasks against simulated today date"
-          >
-            <Bell className={`w-3.5 h-3.5 text-amber-400 ${scanning ? 'animate-bounce' : ''}`} />
-            <span>{scanning ? 'Scanning...' : 'Scan for Reminders'}</span>
-          </button>
+          <div className="flex items-center bg-stone-100 p-0.5 rounded-lg border border-stone-200 text-xs">
+            <button
+              onClick={() => setActiveTab('pending')}
+              className={`px-3 py-1.5 rounded-md font-medium transition-all ${
+                activeTab === 'pending'
+                  ? 'bg-white text-stone-900 shadow-2xs font-semibold'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              Pending ({pendingItems.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`px-3 py-1.5 rounded-md font-medium transition-all ${
+                activeTab === 'history'
+                  ? 'bg-white text-stone-900 shadow-2xs font-semibold'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              History ({historyItems.length})
+            </button>
+          </div>
 
-          {pendingItems.length > 0 && (
+          {activeTab === 'pending' && pendingItems.length > 0 && (
             <button
               onClick={handleApproveAll}
               disabled={approvingAll}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/30 transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-stone-900 hover:bg-stone-800 text-white shadow-2xs transition-all"
             >
-              <CheckCheck className="w-4 h-4" />
-              <span>{approvingAll ? 'Approving...' : `Approve All (${pendingItems.length})`}</span>
+              <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{approvingAll ? 'Approving...' : `Approve all (${pendingItems.length})`}</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Human Gate Banner */}
-      <div className="p-3.5 rounded-2xl bg-indigo-950/30 border border-indigo-900/50 flex items-center justify-between gap-3 text-xs text-indigo-200">
-        <div className="flex items-center gap-2.5">
-          <ShieldAlert className="w-4 h-4 text-indigo-400 shrink-0" />
-          <span>
-            <strong className="text-white">Human Confirmation Guard:</strong> Nothing is sent until you approve. You have complete control over external notifications and tracker tickets.
-          </span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0 text-[11px]">
-          <span
-            className={`px-2 py-0.5 rounded-md border font-mono ${
-              integrations.trello
-                ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800'
-                : 'bg-slate-900 text-slate-400 border-slate-800'
-            }`}
-          >
-            Trello: {integrations.trello ? 'Connected' : 'Internal Mode'}
-          </span>
-          <span
-            className={`px-2 py-0.5 rounded-md border font-mono ${
-              integrations.webhook
-                ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800'
-                : 'bg-slate-900 text-slate-400 border-slate-800'
-            }`}
-          >
-            Webhook: {integrations.webhook ? 'Connected' : 'Offline'}
-          </span>
-        </div>
-      </div>
+      {errorMsg && <ErrorAlert message={errorMsg} onRetry={fetchItems} />}
 
-      {/* Scan Message Alert */}
-      {scanMessage && (
-        <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-900/50 text-xs text-amber-300 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Info className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>{scanMessage}</span>
-          </div>
-          <button onClick={() => setScanMessage(null)} className="text-amber-400 hover:text-white">
-            <X className="w-3.5 h-3.5" />
-          </button>
+      {/* Calm notice when Trello is not configured */}
+      {!integrations.trello && (
+        <div className="p-3 bg-stone-100/80 border border-stone-200 rounded-lg text-xs text-stone-600 flex items-center gap-2">
+          <Info className="w-4 h-4 text-stone-400 shrink-0" />
+          <span>
+            <strong>Internal tracker mode:</strong> Trello integration is not configured. Cards remain safely recorded and accessible inside Nirnay.
+          </span>
         </div>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-        <button
-          onClick={() => setActiveTab('pending')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'pending'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-          }`}
-        >
-          <span>Pending Approval</span>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-              activeTab === 'pending'
-                ? 'bg-indigo-700 text-white'
-                : 'bg-slate-800 text-slate-400'
-            }`}
-          >
-            {pendingItems.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'history'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-          }`}
-        >
-          <span>Audit History</span>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-              activeTab === 'history'
-                ? 'bg-indigo-700 text-white'
-                : 'bg-slate-800 text-slate-400'
-            }`}
-          >
-            {historyItems.length}
-          </span>
-        </button>
-      </div>
-
-      {/* Main List Area */}
       {loading ? (
-        <div className="py-20 text-center">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-3 text-xs text-slate-400">Loading outbox queue...</p>
-        </div>
+        <LoadingSkeleton rows={4} />
       ) : activeTab === 'pending' ? (
         pendingItems.length === 0 ? (
-          <div className="p-12 text-center rounded-2xl bg-slate-900/40 border border-slate-800/80">
-            <CheckCircle2 className="w-10 h-10 text-emerald-400/80 mx-auto mb-3" />
-            <h4 className="text-sm font-semibold text-white">Outbox is completely clear</h4>
-            <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-              No pending notifications or tracker tickets. New meeting confirmations and reminder scans will populate items here for your approval.
-            </p>
-          </div>
+          <EmptyState
+            icon={Send}
+            title="Outbox is clear"
+            description="All notifications, tracker dispatches, and digests have been approved."
+          />
         ) : (
-          <div className="space-y-4">
-            {pendingItems.map((item) => {
-              const isEditing = editingId === item.id;
-              const isActing = actionLoadingId === item.id;
-
-              return (
-                <div
-                  key={item.id}
-                  className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-all space-y-3.5 shadow-sm"
-                >
-                  {/* Top Bar of Card */}
-                  <div className="flex flex-wrap items-center justify-between gap-2.5">
-                    <div className="flex items-center gap-2">
-                      {getKindBadge(item.kind)}
-                      <span className="text-slate-500">•</span>
-                      <span className="text-xs text-slate-400 font-medium">
-                        Target: <strong className="text-slate-200 font-mono capitalize">{item.target}</strong>
-                      </span>
-                      {item.recipient && (
-                        <>
-                          <span className="text-slate-500">•</span>
-                          <span className="text-xs text-slate-400 font-medium">
-                            To: <strong className="text-indigo-300">@{item.recipient}</strong>
-                          </span>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2">
-                      {isEditing ? (
-                        <>
-                          <button
-                            onClick={() => handleSaveEdit(item.id)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
-                          >
-                            <Save className="w-3.5 h-3.5" />
-                            <span>Save</span>
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                            <span>Cancel</span>
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => handleStartEdit(item)}
-                            disabled={isActing}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 transition-colors"
-                            title="Edit message title and body"
-                          >
-                            <Edit2 className="w-3 h-3" />
-                            <span>Edit</span>
-                          </button>
-                          <button
-                            onClick={() => handleApprove(item.id)}
-                            disabled={isActing}
-                            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600/90 hover:bg-emerald-500 text-white shadow-md shadow-emerald-950 transition-colors"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>{isActing ? 'Sending...' : 'Approve'}</span>
-                          </button>
-                          <button
-                            onClick={() => handleReject(item.id)}
-                            disabled={isActing}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-300 bg-rose-950/30 hover:bg-rose-950/70 border border-rose-900/50 transition-colors"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            <span>Reject</span>
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Title and Body */}
-                  {isEditing ? (
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-950 border border-indigo-500 rounded-xl text-xs text-white focus:outline-none font-semibold"
-                        placeholder="Item title"
-                      />
-                      <textarea
-                        value={editBody}
-                        onChange={(e) => setEditBody(e.target.value)}
-                        rows={4}
-                        className="w-full px-3 py-2 bg-slate-950 border border-indigo-500 rounded-xl text-xs text-slate-200 focus:outline-none font-mono"
-                        placeholder="Item body text"
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <h4 className="text-sm font-semibold text-white tracking-tight">
-                        {item.title}
-                      </h4>
-                      {item.body && (
-                        <div className="mt-2 p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed">
-                          {item.body}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Metadata Footer */}
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-800/60">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-slate-500" />
-                      Queued: {item.created_at ? new Date(item.created_at).toLocaleString() : 'Recent'}
-                    </span>
-                    {item.dedupe_key && (
-                      <span className="font-mono text-[10px] text-slate-600 truncate max-w-sm" title={item.dedupe_key}>
-                        dedupe: {item.dedupe_key}
-                      </span>
-                    )}
-                  </div>
+          <div className="space-y-8">
+            {/* Group 1: Tracker Cards */}
+            {trackerCards.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 pb-1 border-b border-stone-200">
+                  <Kanban className="w-4 h-4 text-stone-600" />
+                  <h3 className="text-xs font-semibold text-stone-900">
+                    Tracker cards ({trackerCards.length})
+                  </h3>
                 </div>
-              );
-            })}
+                <div className="space-y-3">{trackerCards.map(renderItemCard)}</div>
+              </div>
+            )}
+
+            {/* Group 2: Reminders */}
+            {reminders.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 pb-1 border-b border-stone-200">
+                  <Bell className="w-4 h-4 text-stone-600" />
+                  <h3 className="text-xs font-semibold text-stone-900">
+                    Reminders ({reminders.length})
+                  </h3>
+                </div>
+                <div className="space-y-3">{reminders.map(renderItemCard)}</div>
+              </div>
+            )}
+
+            {/* Group 3: Weekly Summaries */}
+            {weeklySummaries.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 pb-1 border-b border-stone-200">
+                  <FileText className="w-4 h-4 text-stone-600" />
+                  <h3 className="text-xs font-semibold text-stone-900">
+                    Weekly summaries ({weeklySummaries.length})
+                  </h3>
+                </div>
+                <div className="space-y-3">{weeklySummaries.map(renderItemCard)}</div>
+              </div>
+            )}
           </div>
         )
       ) : (
-        /* History / Audit Trail Tab */
+        /* History Tab: Plain Timeline */
         historyItems.length === 0 ? (
-          <div className="p-12 text-center rounded-2xl bg-slate-900/40 border border-slate-800/80">
-            <Clock className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-            <h4 className="text-sm font-semibold text-white">No history yet</h4>
-            <p className="text-xs text-slate-400 mt-1">
-              Sent, failed, or rejected items will be preserved here as an immutable audit trail.
-            </p>
-          </div>
+          <EmptyState
+            icon={Clock}
+            title="No dispatch history yet"
+            description="Items that you approve or reject will appear in this audit log."
+          />
         ) : (
-          <div className="space-y-3">
+          <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-2xs divide-y divide-stone-100">
             {historyItems.map((item) => (
-              <div
-                key={item.id}
-                className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-2.5"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
+              <div key={item.id} className="p-4 flex items-center justify-between gap-4 text-xs hover:bg-stone-50/70 transition-colors">
+                <div className="space-y-0.5 max-w-xl">
                   <div className="flex items-center gap-2">
-                    {item.status === 'sent' && (
-                      <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                        Sent
-                      </span>
-                    )}
-                    {item.status === 'rejected' && (
-                      <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1">
-                        <XCircle className="w-3 h-3 text-slate-400" />
-                        Rejected
-                      </span>
-                    )}
-                    {item.status === 'failed' && (
-                      <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-950 text-rose-300 border border-rose-700 flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3 text-rose-400" />
-                        Failed
-                      </span>
-                    )}
-                    {getKindBadge(item.kind)}
-                    <span className="text-xs text-slate-400 font-mono">[{item.target}]</span>
-                    {item.recipient && (
-                      <span className="text-xs text-indigo-300">@{item.recipient}</span>
-                    )}
+                    <span className="font-semibold text-stone-900">{item.title}</span>
+                    <StampBadge status={item.status} />
                   </div>
-
-                  <span className="text-[11px] text-slate-500 font-mono">
-                    {item.sent_at
-                      ? `Sent: ${new Date(item.sent_at).toLocaleString()}`
-                      : `Created: ${item.created_at ? new Date(item.created_at).toLocaleString() : ''}`}
-                  </span>
+                  <p className="text-stone-500 text-[11px] line-clamp-1">{item.body || 'No description.'}</p>
                 </div>
-
-                <div className="text-xs font-semibold text-slate-200">{item.title}</div>
-
-                {item.error && (
-                  <div className="p-2 rounded-lg bg-rose-950/40 border border-rose-900/60 text-xs text-rose-300 font-mono">
-                    Error: {item.error}
+                <div className="text-stone-400 text-right shrink-0">
+                  <div className="text-[11px] text-stone-600">
+                    {item.sent_at ? new Date(item.sent_at).toLocaleDateString() : new Date(item.created_at).toLocaleDateString()}
                   </div>
-                )}
-
-                {item.body && (
-                  <div className="text-[11px] text-slate-400 font-mono bg-slate-950/50 p-2.5 rounded-lg border border-slate-800/60 whitespace-pre-wrap max-h-32 overflow-y-auto">
-                    {item.body}
-                  </div>
-                )}
+                  <span className="text-[10px] text-stone-400 capitalize">{item.target}</span>
+                </div>
               </div>
             ))}
           </div>

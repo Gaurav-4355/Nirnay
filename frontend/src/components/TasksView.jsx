@@ -8,30 +8,66 @@ import {
   CheckCircle2,
   Clock,
   Ban,
-  Quote,
   Search,
   GitBranch,
   RefreshCw,
   ExternalLink,
   Kanban,
   Table as TableIcon,
-  Layers,
+  GripVertical,
+  ArrowUpDown,
+  UserPlus,
 } from 'lucide-react';
+import StampBadge from '../ui/StampBadge';
+import LoadingSkeleton from '../ui/LoadingSkeleton';
+import EmptyState from '../ui/EmptyState';
+import ErrorAlert from '../ui/ErrorAlert';
 
 export default function TasksView({ showToast }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
   const [ownerFilter, setOwnerFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingTaskId, setUpdatingTaskId] = useState(null);
-  const [viewMode, setViewMode] = useState('board'); // 'board' | 'table'
+
+  // Remember view mode in URL hash (#board | #table)
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '');
+      if (hash === 'table' || hash === 'board') return hash;
+    }
+    return 'board';
+  });
+
+  const [deadlineSortAsc, setDeadlineSortAsc] = useState(true);
   const [integrations, setIntegrations] = useState({ trello: false, webhook: false });
   const [todayStr, setTodayStr] = useState('');
   const [dragOverCol, setDragOverCol] = useState(null);
+  const [assigningTaskId, setAssigningTaskId] = useState(null);
+  const [assignOwnerInput, setAssignOwnerInput] = useState('');
+
+  const handleSetViewMode = (mode) => {
+    setViewMode(mode);
+    if (typeof window !== 'undefined') {
+      window.location.hash = mode;
+    }
+  };
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash === 'table' || hash === 'board') {
+        setViewMode(hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const fetchTasks = (owner = '') => {
     setLoading(true);
+    setErrorMsg(null);
     let url = '/api/tasks';
     if (owner === '__unassigned__') {
       url = '/api/tasks?owner=unassigned';
@@ -39,13 +75,17 @@ export default function TasksView({ showToast }) {
       url = `/api/tasks?owner=${encodeURIComponent(owner)}`;
     }
     fetch(url)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load tasks');
+        return res.json();
+      })
       .then((data) => {
         setTasks(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch((err) => {
         console.error('Error fetching tasks:', err);
+        setErrorMsg('Unable to load execution tasks from server.');
         setLoading(false);
       });
   };
@@ -53,11 +93,11 @@ export default function TasksView({ showToast }) {
   useEffect(() => {
     fetchTasks(ownerFilter);
     fetch('/api/integrations/status')
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : {}))
       .then((data) => setIntegrations(data))
       .catch(() => {});
     fetch('/api/settings/today')
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : {}))
       .then((data) => setTodayStr(data.today || ''))
       .catch(() => {});
   }, [ownerFilter]);
@@ -101,7 +141,7 @@ export default function TasksView({ showToast }) {
         setTasks((prev) =>
           prev.map((t) => (t.id === taskId ? originalTask : t))
         );
-        if (showToast) showToast('Failed to update task status. Rolled back.', 'error');
+        if (showToast) showToast('Failed to update task status.', 'error');
       }
     } catch (err) {
       // Rollback
@@ -111,6 +151,30 @@ export default function TasksView({ showToast }) {
       if (showToast) showToast('Network error updating task.', 'error');
     } finally {
       setUpdatingTaskId(null);
+    }
+  };
+
+  const handleAssignOwner = async (taskId) => {
+    const newOwner = assignOwnerInput.trim();
+    if (!newOwner) return;
+
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner: newOwner, needs_clarification: false }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setTasks((prev) =>
+          prev.map((t) => (t.id === taskId ? { ...t, owner: updated.owner, needs_clarification: updated.needs_clarification } : t))
+        );
+        setAssigningTaskId(null);
+        setAssignOwnerInput('');
+        if (showToast) showToast(`Assigned to @${newOwner}`, 'success');
+      }
+    } catch (e) {
+      if (showToast) showToast('Failed to assign owner.', 'error');
     }
   };
 
@@ -144,24 +208,9 @@ export default function TasksView({ showToast }) {
     }
   };
 
-  const getOwnerColor = (name) => {
-    if (!name) return 'bg-amber-950/80 text-amber-300 border-amber-800/80';
-    const colorPairs = [
-      'bg-indigo-950 text-indigo-300 border-indigo-700',
-      'bg-purple-950 text-purple-300 border-purple-700',
-      'bg-emerald-950 text-emerald-300 border-emerald-700',
-      'bg-amber-950 text-amber-300 border-amber-700',
-      'bg-rose-950 text-rose-300 border-rose-700',
-      'bg-cyan-950 text-cyan-300 border-cyan-700',
-    ];
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    return colorPairs[Math.abs(hash) % colorPairs.length];
-  };
-
   const getDeadlineBadge = (deadline, status) => {
-    if (!deadline) return <span className="text-slate-500 italic text-[11px]">No deadline</span>;
-    if (status === 'done') return <span className="text-slate-400 font-mono text-[11px]">{deadline}</span>;
+    if (!deadline) return <span className="text-stone-400 italic text-xs">No deadline</span>;
+    if (status === 'done') return <span className="text-stone-500 text-xs font-sans">{deadline}</span>;
 
     let diff = null;
     if (todayStr) {
@@ -172,29 +221,28 @@ export default function TasksView({ showToast }) {
 
     if (diff !== null && diff < 0) {
       return (
-        <span className="px-2 py-0.5 rounded-md font-mono text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">
+        <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-red-50 text-red-800 border border-red-200">
           Overdue ({Math.abs(diff)}d ago)
         </span>
       );
     }
     if (diff !== null && diff <= 2) {
       return (
-        <span className="px-2 py-0.5 rounded-md font-mono text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800">
+        <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
           Due in {diff === 0 ? 'today' : `${diff}d`}
         </span>
       );
     }
 
     return (
-      <span className="text-slate-300 font-mono text-[11px] flex items-center gap-1">
-        <Calendar className="w-3 h-3 text-slate-500" />
+      <span className="text-stone-600 text-xs flex items-center gap-1 font-sans">
+        <Calendar className="w-3 h-3 text-stone-400" />
         {deadline}
       </span>
     );
   };
 
   const filteredTasks = tasks.filter((t) => {
-    if (statusFilter && t.status !== statusFilter) return false;
     if (ownerFilter === '__unassigned__' && t.owner && t.owner.trim()) return false;
     if (ownerFilter && ownerFilter !== '__unassigned__' && t.owner !== ownerFilter) return false;
     if (searchQuery.trim()) {
@@ -208,58 +256,85 @@ export default function TasksView({ showToast }) {
     return true;
   });
 
+  // Table sorting by deadline
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    if (!a.deadline) return 1;
+    if (!b.deadline) return -1;
+    return deadlineSortAsc
+      ? a.deadline.localeCompare(b.deadline)
+      : b.deadline.localeCompare(a.deadline);
+  });
+
   const totalCount = tasks.length;
   const pendingCount = tasks.filter((t) => t.status === 'pending').length;
   const doneCount = tasks.filter((t) => t.status === 'done').length;
   const blockedCount = tasks.filter((t) => t.status === 'blocked').length;
 
   const kanbanColumns = [
-    { id: 'pending', title: 'Pending', count: pendingCount, border: 'border-indigo-500/40', bg: 'bg-indigo-950/20' },
-    { id: 'blocked', title: 'Blocked', count: blockedCount, border: 'border-rose-500/40', bg: 'bg-rose-950/20' },
-    { id: 'done', title: 'Done', count: doneCount, border: 'border-emerald-500/40', bg: 'bg-emerald-950/20' },
+    {
+      id: 'pending',
+      title: 'Pending',
+      count: pendingCount,
+      headerStyle: 'bg-stone-100/70 border-stone-200 text-stone-800',
+      dotColor: 'bg-stone-500',
+    },
+    {
+      id: 'blocked',
+      title: 'Blocked',
+      count: blockedCount,
+      headerStyle: 'bg-red-50/70 border-red-200 text-red-900',
+      dotColor: 'bg-red-600',
+    },
+    {
+      id: 'done',
+      title: 'Done',
+      count: doneCount,
+      headerStyle: 'bg-emerald-50/70 border-emerald-200 text-emerald-900',
+      dotColor: 'bg-emerald-600',
+    },
   ];
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-4 pb-4 border-b border-stone-200">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <CheckSquare className="w-6 h-6 text-emerald-400" />
-            Execution Tasks Board
+          <h2 className="text-xl font-bold tracking-tight text-stone-900 flex items-center gap-2">
+            <CheckSquare className="w-5 h-5 text-stone-700" />
+            Execution Tasks
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Track commitments, drag cards across status columns, and keep Trello trackers in sync.
+          <p className="text-xs text-stone-500 mt-1">
+            Track commitments across meetings, update statuses via drag & drop or dense table view, and sync to external trackers.
           </p>
         </div>
 
         {/* View Toggle & Status */}
         <div className="flex items-center gap-3 flex-wrap">
           {!integrations.trello && (
-            <span className="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 font-mono text-[11px]">
-              Internal tracker mode (Trello not configured)
+            <span className="px-2.5 py-1 rounded bg-stone-100 border border-stone-200 text-stone-600 text-xs">
+              Internal tracker mode
             </span>
           )}
 
-          {/* Table | Board Toggle */}
-          <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800">
+          {/* Table | Board Toggle (URL hash remembered) */}
+          <div className="flex items-center bg-stone-100 p-0.5 rounded-lg border border-stone-200">
             <button
-              onClick={() => setViewMode('board')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              onClick={() => handleSetViewMode('board')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 viewMode === 'board'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white text-stone-900 shadow-2xs font-semibold'
+                  : 'text-stone-600 hover:text-stone-900'
               }`}
             >
               <Kanban className="w-3.5 h-3.5" />
               <span>Board</span>
             </button>
             <button
-              onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              onClick={() => handleSetViewMode('table')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 viewMode === 'table'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white text-stone-900 shadow-2xs font-semibold'
+                  : 'text-stone-600 hover:text-stone-900'
               }`}
             >
               <TableIcon className="w-3.5 h-3.5" />
@@ -269,18 +344,20 @@ export default function TasksView({ showToast }) {
         </div>
       </div>
 
+      {errorMsg && <ErrorAlert message={errorMsg} onRetry={() => fetchTasks(ownerFilter)} />}
+
       {/* Owner Filter Chips Row */}
       <div className="flex items-center gap-2 flex-wrap pb-1 text-xs">
-        <span className="text-slate-500 font-medium shrink-0 flex items-center gap-1">
-          <Filter className="w-3.5 h-3.5" />
-          Filter Owner:
+        <span className="text-stone-500 font-medium shrink-0 flex items-center gap-1">
+          <Filter className="w-3.5 h-3.5 text-stone-400" />
+          Filter:
         </span>
         <button
           onClick={() => setOwnerFilter('')}
-          className={`px-3 py-1 rounded-xl font-semibold transition-all ${
+          className={`px-3 py-1 rounded-lg font-medium transition-all ${
             !ownerFilter
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950'
-              : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
+              ? 'bg-stone-900 text-white shadow-2xs'
+              : 'bg-white text-stone-700 hover:bg-stone-100 border border-stone-200'
           }`}
         >
           All ({totalCount})
@@ -291,10 +368,10 @@ export default function TasksView({ showToast }) {
             <button
               key={owner}
               onClick={() => setOwnerFilter(ownerFilter === owner ? '' : owner)}
-              className={`px-3 py-1 rounded-xl font-semibold transition-all ${
+              className={`px-3 py-1 rounded-lg font-medium transition-all ${
                 ownerFilter === owner
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950'
-                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'
+                  ? 'bg-stone-900 text-white shadow-2xs'
+                  : 'bg-white text-stone-700 hover:bg-stone-100 border border-stone-200'
               }`}
             >
               @{owner} ({count})
@@ -304,10 +381,10 @@ export default function TasksView({ showToast }) {
         {unassignedCount > 0 && (
           <button
             onClick={() => setOwnerFilter(ownerFilter === '__unassigned__' ? '' : '__unassigned__')}
-            className={`px-3 py-1 rounded-xl font-semibold transition-all flex items-center gap-1 ${
+            className={`px-3 py-1 rounded-lg font-medium transition-all flex items-center gap-1 ${
               ownerFilter === '__unassigned__'
-                ? 'bg-amber-600 text-white shadow-md shadow-amber-950 font-bold'
-                : 'bg-slate-900 text-amber-400/90 hover:bg-slate-800 hover:text-amber-300 border border-slate-800'
+                ? 'bg-amber-600 text-white shadow-2xs font-semibold'
+                : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-300'
             }`}
           >
             <span>Unassigned ({unassignedCount})</span>
@@ -317,16 +394,13 @@ export default function TasksView({ showToast }) {
 
       {/* Main Board vs Table Area */}
       {loading ? (
-        <div className="py-20 text-center">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-3 text-xs text-slate-400">Loading execution tasks...</p>
-        </div>
+        <LoadingSkeleton rows={5} type={viewMode === 'board' ? 'cards' : 'ledger'} />
       ) : tasks.length === 0 ? (
-        <div className="p-12 text-center rounded-2xl bg-slate-900/40 border border-slate-800">
-          <CheckSquare className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-          <h4 className="text-sm font-semibold text-white">No tasks found</h4>
-          <p className="text-xs text-slate-400 mt-1">Analyze a meeting to extract actionable tasks.</p>
-        </div>
+        <EmptyState
+          icon={CheckSquare}
+          title="No tasks recorded yet"
+          description="Analyze meeting transcripts to automatically extract actionable tasks and assignees."
+        />
       ) : viewMode === 'board' ? (
         /* KANBAN BOARD VIEW */
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
@@ -340,35 +414,27 @@ export default function TasksView({ showToast }) {
                 onDragOver={(e) => handleDragOver(e, col.id)}
                 onDragLeave={(e) => handleDragLeave(e, col.id)}
                 onDrop={(e) => handleDrop(e, col.id)}
-                className={`p-4 rounded-3xl bg-slate-900/50 border transition-all min-h-[500px] flex flex-col space-y-3 ${
-                  isHovered ? 'border-indigo-400 ring-2 ring-indigo-500/30 bg-slate-900/90' : col.border
+                className={`p-3.5 rounded-xl border transition-all min-h-[500px] flex flex-col space-y-3 bg-[#f7f6f2] ${
+                  isHovered ? 'border-stone-400 ring-2 ring-stone-300 bg-stone-100' : 'border-stone-200'
                 }`}
               >
-                {/* Column Header */}
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+                {/* Column Header with restrained color */}
+                <div
+                  className={`px-3 py-2 rounded-lg border flex items-center justify-between ${col.headerStyle}`}
+                >
                   <div className="flex items-center gap-2">
-                    <span
-                      className={`w-2.5 h-2.5 rounded-full ${
-                        col.id === 'done'
-                          ? 'bg-emerald-400'
-                          : col.id === 'blocked'
-                          ? 'bg-rose-400'
-                          : 'bg-indigo-400'
-                      }`}
-                    />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-                      {col.title}
-                    </h3>
+                    <span className={`w-2 h-2 rounded-full ${col.dotColor}`} />
+                    <h3 className="text-xs font-semibold text-stone-900">{col.title}</h3>
                   </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-800 text-slate-300 font-bold border border-slate-700">
+                  <span className="text-xs font-sans text-stone-500 font-medium">
                     {colTasks.length}
                   </span>
                 </div>
 
                 {/* Cards List */}
-                <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+                <div className="space-y-2.5 flex-1 overflow-y-auto pr-0.5">
                   {colTasks.length === 0 ? (
-                    <div className="py-12 text-center text-[11px] text-slate-600 border border-dashed border-slate-800/80 rounded-2xl">
+                    <div className="py-12 text-center text-xs text-stone-400 border border-dashed border-stone-200 rounded-lg">
                       Drop tasks here
                     </div>
                   ) : (
@@ -377,58 +443,82 @@ export default function TasksView({ showToast }) {
                         key={task.id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, task.id)}
-                        className="p-4 rounded-2xl bg-slate-950/80 hover:bg-slate-900 border border-slate-800/80 hover:border-slate-700 transition-all space-y-3 cursor-grab active:cursor-grabbing shadow-sm"
+                        className="group relative p-3.5 rounded-lg bg-white hover:bg-stone-50/80 border border-stone-200 hover:border-stone-300 transition-all space-y-2.5 cursor-grab active:cursor-grabbing shadow-2xs"
                       >
+                        {/* Drag Handle on hover */}
+                        <div className="absolute top-2.5 right-2 opacity-0 group-hover:opacity-100 text-stone-300 hover:text-stone-500 transition-opacity">
+                          <GripVertical className="w-3.5 h-3.5" />
+                        </div>
+
                         {/* Title */}
-                        <div className="text-xs font-semibold text-white leading-snug">
+                        <div className="text-xs font-semibold text-stone-900 leading-snug pr-4">
                           {task.title}
                         </div>
 
-                        {/* Owner Badge & Deadlines */}
-                        <div className="flex items-center justify-between gap-2 text-xs pt-1 border-t border-slate-800/60 flex-wrap">
+                        {/* Owner & Deadlines */}
+                        <div className="flex items-center justify-between gap-2 text-xs pt-1.5 border-t border-stone-100 flex-wrap">
                           <div className="flex items-center gap-1.5">
                             {task.owner ? (
-                              <>
-                                <span
-                                  className={`w-6 h-6 rounded-lg text-[10px] font-bold border flex items-center justify-center ${getOwnerColor(
-                                    task.owner
-                                  )}`}
-                                >
-                                  {task.owner.slice(0, 2).toUpperCase()}
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-5 h-5 rounded-full bg-stone-100 border border-stone-300 text-[10px] font-semibold text-stone-700 flex items-center justify-center">
+                                  {task.owner.slice(0, 1).toUpperCase()}
                                 </span>
-                                <span className="text-[11px] font-medium text-slate-300">
+                                <span className="text-xs font-medium text-stone-800">
                                   @{task.owner}
                                 </span>
-                              </>
+                              </div>
+                            ) : assigningTaskId === task.id ? (
+                              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="text"
+                                  placeholder="Owner name..."
+                                  value={assignOwnerInput}
+                                  onChange={(e) => setAssignOwnerInput(e.target.value)}
+                                  className="w-24 px-1.5 py-0.5 text-xs bg-white border border-stone-300 rounded focus:outline-none"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={() => handleAssignOwner(task.id)}
+                                  className="px-1.5 py-0.5 bg-stone-900 text-white rounded text-[11px]"
+                                >
+                                  Save
+                                </button>
+                              </div>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-950/80 text-amber-300 border border-amber-800/80 flex items-center gap-1">
-                                <User className="w-3 h-3 text-amber-400" />
-                                Unassigned
-                              </span>
+                              <button
+                                onClick={() => {
+                                  setAssigningTaskId(task.id);
+                                  setAssignOwnerInput('');
+                                }}
+                                className="px-2 py-0.5 rounded text-[11px] font-medium border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 flex items-center gap-1"
+                              >
+                                <UserPlus className="w-3 h-3 text-amber-700" />
+                                <span>Assign</span>
+                              </button>
                             )}
                           </div>
 
                           <div>{getDeadlineBadge(task.deadline, task.status)}</div>
                         </div>
 
-                        {/* Dependency Badge */}
+                        {/* Dependency Line: Waiting for: <task> */}
                         {task.depends_on_title && (
-                          <div className="text-[10px] px-2 py-1 rounded-lg bg-cyan-950/40 text-cyan-300 border border-cyan-800/60 flex items-center gap-1 truncate">
-                            <GitBranch className="w-3 h-3 text-cyan-400 shrink-0" />
-                            <span className="truncate">Waits for: {task.depends_on_title}</span>
+                          <div className="text-[11px] px-2 py-1 rounded bg-stone-50 text-stone-700 border border-stone-200 flex items-center gap-1.5 truncate">
+                            <GitBranch className="w-3 h-3 text-stone-500 shrink-0" />
+                            <span className="truncate">Waiting for: {task.depends_on_title}</span>
                           </div>
                         )}
 
-                        {/* Trello Link & Needs Clarification */}
-                        <div className="flex items-center justify-between text-[10px] pt-1 text-slate-500">
+                        {/* Clarification Notice or Trello Link */}
+                        <div className="flex items-center justify-between text-[11px] pt-1 text-stone-400">
                           {task.needs_clarification ? (
-                            <span className="text-amber-400 flex items-center gap-1">
-                              <AlertCircle className="w-3 h-3" />
-                              Clarification
+                            <span className="text-amber-800 flex items-center gap-1 text-[11px]">
+                              <AlertCircle className="w-3 h-3 text-amber-600" />
+                              Needs clarification
                             </span>
                           ) : (
-                            <span className="font-mono text-[10px] text-slate-600">
-                              {task.meeting_title ? task.meeting_title.slice(0, 18) + '...' : ''}
+                            <span className="text-stone-400 truncate max-w-[150px]">
+                              {task.meeting_title || ''}
                             </span>
                           )}
 
@@ -437,7 +527,7 @@ export default function TasksView({ showToast }) {
                               href={task.trello_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-indigo-400 hover:text-indigo-300 flex items-center gap-0.5"
+                              className="text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <span>Trello</span>
@@ -454,92 +544,115 @@ export default function TasksView({ showToast }) {
           })}
         </div>
       ) : (
-        /* TABLE VIEW */
-        <div className="space-y-3">
-          {filteredTasks.map((task) => (
+        /* TABLE VIEW (Dense with hairlines, sortable by deadline) */
+        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-2xs">
+          {/* Table Header */}
+          <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-[#f7f6f2] border-b border-stone-200 text-xs font-semibold text-stone-700">
+            <div className="col-span-5">Task Title</div>
+            <div className="col-span-2">Owner</div>
             <div
-              key={task.id}
-              className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-all space-y-3"
+              className="col-span-2 flex items-center gap-1 cursor-pointer hover:text-stone-900 select-none"
+              onClick={() => setDeadlineSortAsc(!deadlineSortAsc)}
+              title="Click to sort by deadline"
             >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-semibold text-white tracking-tight">{task.title}</h4>
-                    {task.needs_clarification && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-700 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3 text-amber-400" />
-                        Needs Clarification
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
-                    <span className="text-indigo-400">Meeting: {task.meeting_title}</span>
-                    <span>•</span>
-                    <span>Date: {task.meeting_date}</span>
-                    {task.depends_on_title && (
-                      <>
-                        <span>•</span>
-                        <span className="text-cyan-400 flex items-center gap-1">
-                          <GitBranch className="w-3 h-3" />
-                          Waits for: {task.depends_on_title}
-                        </span>
-                      </>
-                    )}
-                  </div>
+              <span>Deadline</span>
+              <ArrowUpDown className="w-3 h-3 text-stone-400" />
+            </div>
+            <div className="col-span-2">Status</div>
+            <div className="col-span-1 text-right">Tracker</div>
+          </div>
+
+          {/* Table Rows */}
+          <div className="divide-y divide-stone-100">
+            {sortedTasks.map((task) => (
+              <div
+                key={task.id}
+                className="grid grid-cols-12 gap-4 px-6 py-3.5 items-center hover:bg-stone-50/70 transition-colors text-xs"
+              >
+                {/* Title & Dependency line */}
+                <div className="col-span-5 space-y-1">
+                  <span className="font-semibold text-stone-900 leading-snug">{task.title}</span>
+                  {task.depends_on_title && (
+                    <div className="text-[11px] text-stone-500 flex items-center gap-1">
+                      <GitBranch className="w-3 h-3 text-stone-400" />
+                      <span>Waiting for: {task.depends_on_title}</span>
+                    </div>
+                  )}
+                  {task.needs_clarification && (
+                    <p className="text-[11px] text-amber-800">Needs clarification on owner or date</p>
+                  )}
                 </div>
 
-                <div className="shrink-0 flex items-center gap-3">
+                {/* Owner */}
+                <div className="col-span-2">
+                  {task.owner ? (
+                    <span className="font-medium text-stone-800">@{task.owner}</span>
+                  ) : assigningTaskId === task.id ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        placeholder="Name..."
+                        value={assignOwnerInput}
+                        onChange={(e) => setAssignOwnerInput(e.target.value)}
+                        className="w-20 px-1 py-0.5 text-xs bg-white border border-stone-300 rounded"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => handleAssignOwner(task.id)}
+                        className="px-1.5 py-0.5 bg-stone-900 text-white rounded text-[11px]"
+                      >
+                        OK
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setAssigningTaskId(task.id);
+                        setAssignOwnerInput('');
+                      }}
+                      className="px-2 py-0.5 rounded text-[11px] font-medium border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                    >
+                      Assign
+                    </button>
+                  )}
+                </div>
+
+                {/* Deadline */}
+                <div className="col-span-2">{getDeadlineBadge(task.deadline, task.status)}</div>
+
+                {/* Status Dropdown */}
+                <div className="col-span-2">
                   <select
                     value={task.status}
                     disabled={updatingTaskId === task.id}
                     onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl border focus:outline-none cursor-pointer ${
-                      task.status === 'done'
-                        ? 'bg-emerald-950/90 text-emerald-300 border-emerald-700'
-                        : task.status === 'blocked'
-                        ? 'bg-rose-950/90 text-rose-300 border-rose-700'
-                        : 'bg-slate-800 text-slate-300 border-slate-700'
-                    }`}
+                    className="text-xs font-medium px-2 py-1 rounded border border-stone-200 bg-white text-stone-800 focus:outline-none cursor-pointer"
                   >
-                    <option value="pending" className="bg-slate-900 text-slate-300">Pending</option>
-                    <option value="done" className="bg-slate-900 text-emerald-300">Done</option>
-                    <option value="blocked" className="bg-slate-900 text-rose-300">Blocked</option>
+                    <option value="pending">Pending</option>
+                    <option value="blocked">Blocked</option>
+                    <option value="done">Done</option>
                   </select>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-4 text-xs flex-wrap pt-2 border-t border-slate-800/80">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-slate-500">Owner:</span>
-                  {task.owner ? (
-                    <span className={`font-semibold px-2 py-0.5 rounded-md ${getOwnerColor(task.owner)}`}>
-                      @{task.owner}
-                    </span>
+                {/* Tracker Link */}
+                <div className="col-span-1 text-right">
+                  {task.trello_url ? (
+                    <a
+                      href={task.trello_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:text-indigo-800 text-xs inline-flex items-center gap-0.5"
+                    >
+                      <span>Trello</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
                   ) : (
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-950/80 text-amber-300 border border-amber-800/80 flex items-center gap-1">
-                      <User className="w-3 h-3 text-amber-400" />
-                      Unassigned
-                    </span>
+                    <span className="text-stone-300 text-[11px]">—</span>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-slate-500">Deadline:</span>
-                  {getDeadlineBadge(task.deadline, task.status)}
-                </div>
-                {task.trello_url && (
-                  <a
-                    href={task.trello_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-950/40 border border-indigo-800/60 px-2 py-0.5 rounded-md"
-                  >
-                    <span>Open in Trello</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -5,7 +5,6 @@ import {
   Compass,
   CheckSquare,
   AlertTriangle,
-  Sparkles,
   RotateCcw,
   Send,
   FileText,
@@ -14,6 +13,7 @@ import {
   Award,
   HelpCircle,
 } from 'lucide-react';
+import StampBadge from '../ui/StampBadge';
 
 export default function Sidebar({
   currentView,
@@ -65,44 +65,44 @@ export default function Sidebar({
     },
     {
       id: 'new_meeting',
-      label: 'New Meeting',
+      label: 'New meeting',
       icon: PlusCircle,
-      description: 'Analyze & extract actions',
+      description: 'Analyze transcript',
     },
     {
       id: 'decisions',
       label: 'Decisions',
       icon: Compass,
       count: stats?.decisionsCount,
-      description: 'Historical decision timeline',
+      description: 'Living ledger',
     },
     {
       id: 'tasks',
       label: 'Tasks',
       icon: CheckSquare,
       count: stats?.tasksCount,
-      description: 'Execution tracking board',
+      description: 'Board and table',
     },
     {
       id: 'conflicts',
       label: 'Conflicts',
       icon: AlertTriangle,
       count: stats?.conflictsCount,
-      description: 'Cross-meeting conflicts log',
+      description: 'Detected clashes',
     },
     {
       id: 'outbox',
-      label: 'Outbox',
+      label: 'Waiting for approval',
       icon: Send,
       count: stats?.pendingOutboxCount,
       isAlert: stats?.pendingOutboxCount > 0,
-      description: 'Approval & notification gateway',
+      description: 'Tracker & reminder outbox',
     },
     {
       id: 'ask',
       label: 'Ask Nirnay',
       icon: MessageSquare,
-      description: 'Grounded AI with citations',
+      description: 'Grounded conversation',
     },
     {
       id: 'accuracy',
@@ -112,38 +112,40 @@ export default function Sidebar({
     },
     {
       id: 'digests',
-      label: 'Weekly Digests',
+      label: 'Weekly summaries',
       icon: FileText,
-      description: 'Team commitment summaries',
+      description: 'Team commitments',
     },
     {
       id: 'brief',
-      label: 'Meeting Brief',
+      label: 'Meeting brief',
       icon: BookOpen,
-      description: 'Pre-meeting printable pack',
+      description: 'Printable agenda pack',
     },
   ];
 
   return (
-    <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col justify-between shrink-0 h-screen sticky top-0 select-none print:hidden">
+    <aside className="w-64 bg-[#f7f6f2] border-r border-stone-200 flex flex-col justify-between shrink-0 h-screen sticky top-0 select-none print:hidden">
       <div className="overflow-y-auto">
         {/* Brand Header */}
-        <div className="p-5 border-b border-slate-800">
+        <div className="p-5 border-b border-stone-200">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-amber-400 flex items-center justify-center shadow-lg shadow-indigo-900/30">
-              <Sparkles className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-stone-900 flex items-center justify-center text-white text-sm font-bold shadow-xs">
+              N
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
-                Nirnay
-                <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                  AI
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-lg font-bold tracking-tight text-stone-900">
+                  Nirnay
+                </h1>
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-stone-300 text-stone-600 bg-white">
+                  v1.0
                 </span>
-              </h1>
-              <p className="text-[11px] font-medium text-slate-400">Meeting-to-Execution</p>
+              </div>
+              <p className="text-xs text-stone-500 font-medium">Meeting-to-Execution</p>
             </div>
           </div>
-          <p className="mt-3 text-xs italic text-amber-300/80 bg-amber-950/30 border border-amber-900/40 rounded-lg px-2.5 py-1.5">
+          <p className="mt-3 text-xs italic text-stone-700 bg-stone-200/50 border border-stone-300/60 rounded-lg px-2.5 py-1.5 font-serif">
             "Meeting ke faisle, kaam mein badlo."
           </p>
         </div>
@@ -157,38 +159,29 @@ export default function Sidebar({
               <button
                 key={item.id}
                 onClick={() => setCurrentView(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold'
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/80'
+                    ? 'bg-stone-900 text-white font-semibold shadow-xs'
+                    : 'text-stone-700 hover:text-stone-900 hover:bg-stone-200/60'
                 }`}
               >
-                <div className="flex items-center gap-3 truncate">
+                <div className="flex items-center gap-2.5 truncate">
                   <Icon
                     className={`w-4 h-4 shrink-0 ${
-                      isActive
-                        ? 'text-white'
-                        : item.id === 'conflicts'
-                        ? 'text-rose-400'
-                        : item.id === 'accuracy'
-                        ? 'text-amber-400'
-                        : item.id === 'outbox' && item.isAlert
-                        ? 'text-amber-400'
-                        : 'text-slate-400'
+                      isActive ? 'text-white' : 'text-stone-500'
                     }`}
                   />
                   <span className="truncate">{item.label}</span>
                 </div>
+
                 {item.count !== undefined && item.count > 0 && (
                   <span
-                    className={`text-[11px] px-2 py-0.5 rounded-full font-bold shrink-0 ${
+                    className={`text-[11px] px-1.5 py-0.2 rounded font-sans ${
                       isActive
-                        ? 'bg-indigo-700 text-indigo-100'
-                        : item.id === 'conflicts'
-                        ? 'bg-rose-950 text-rose-300 border border-rose-800'
-                        : item.id === 'outbox'
-                        ? 'bg-amber-950 text-amber-300 border border-amber-800 animate-pulse'
-                        : 'bg-slate-800 text-slate-300 border border-slate-700'
+                        ? 'bg-stone-800 text-stone-200'
+                        : item.isAlert
+                        ? 'bg-amber-100 text-amber-900 font-semibold border border-amber-300'
+                        : 'bg-stone-200 text-stone-700'
                     }`}
                   >
                     {item.count}
@@ -200,38 +193,31 @@ export default function Sidebar({
         </nav>
       </div>
 
-      {/* Footer Info */}
-      <div className="p-4 border-t border-slate-800 text-xs text-slate-500 space-y-2.5 shrink-0">
-        {/* Dynamic Model Indicator */}
-        <div className="flex items-center justify-between text-slate-400 font-mono text-[11px]">
+      {/* Footer Info & Actions */}
+      <div className="p-4 border-t border-stone-200 space-y-3 bg-[#f7f6f2]">
+        <div className="flex items-center justify-between text-stone-600 text-xs">
           <span className="flex items-center gap-1.5 truncate max-w-[170px]" title={modelName}>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse"></span>
+            <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0"></span>
             <span className="truncate">{modelName}</span>
           </span>
-          <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800 text-[10px]">
-            active
-          </span>
+          <span className="text-[10px] text-stone-500">active</span>
         </div>
 
-        {/* How It Works Modal Button */}
-        {onOpenHowItWorks && (
-          <button
-            onClick={onOpenHowItWorks}
-            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors"
-          >
-            <HelpCircle className="w-3.5 h-3.5 text-indigo-400" />
-            <span>How Nirnay Works</span>
-          </button>
-        )}
+        <button
+          onClick={onOpenHowItWorks}
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium text-stone-700 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 transition-colors shadow-2xs"
+        >
+          <HelpCircle className="w-3.5 h-3.5 text-stone-500" />
+          <span>How Nirnay works</span>
+        </button>
 
-        {/* Reset Demo Data Button */}
         <button
           onClick={handleReset}
           disabled={resetting}
-          className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold text-rose-400/90 hover:text-rose-300 bg-rose-950/20 hover:bg-rose-950/50 border border-rose-900/40 transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium text-stone-500 hover:text-red-700 bg-transparent hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors"
         >
           <RotateCcw className={`w-3.5 h-3.5 ${resetting ? 'animate-spin' : ''}`} />
-          <span>{resetting ? 'Resetting...' : 'Reset Demo Data'}</span>
+          <span>{resetting ? 'Resetting...' : 'Reset demo data'}</span>
         </button>
       </div>
     </aside>

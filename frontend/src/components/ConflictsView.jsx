@@ -2,30 +2,41 @@ import React, { useState, useEffect } from 'react';
 import {
   AlertTriangle,
   Calendar,
-  CheckCircle2,
-  Clock,
-  Layers,
   Search,
   Shuffle,
   Users,
   GitBranch,
+  ArrowRight,
+  Layers,
+  Clock,
 } from 'lucide-react';
+import StampBadge from '../ui/StampBadge';
+import RedPenStrike from '../ui/RedPenStrike';
+import LoadingSkeleton from '../ui/LoadingSkeleton';
+import EmptyState from '../ui/EmptyState';
+import ErrorAlert from '../ui/ErrorAlert';
 
 export default function ConflictsView() {
   const [conflicts, setConflicts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
   const [searchFilter, setSearchFilter] = useState('');
 
   const fetchConflicts = () => {
     setLoading(true);
+    setErrorMsg(null);
     fetch('/api/conflicts')
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load conflicts');
+        return res.json();
+      })
       .then((data) => {
-        setConflicts(data);
+        setConflicts(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch((err) => {
         console.error('Error fetching conflicts:', err);
+        setErrorMsg('Unable to retrieve conflicts log from server.');
         setLoading(false);
       });
   };
@@ -45,89 +56,188 @@ export default function ConflictsView() {
     );
   });
 
-  const getConflictIcon = (type) => {
-    if (type === 'decision_conflict') {
-      return <Shuffle className="w-4 h-4 text-amber-400" />;
+  // --- Visual Treatment 1: Decision Conflict (Before / After Diff) ---
+  const renderDecisionDiff = (c) => {
+    // Extract values from description or related titles
+    const desc = c.description || '';
+    const match = desc.match(/changed from\s+(.*?)\s+\((.*?)\)\s+to\s+(.*?)$/i);
+    let oldVal = 'Previous decision';
+    let oldContext = 'Earlier meeting';
+    let newVal = 'New decision';
+
+    if (match) {
+      oldVal = match[1];
+      oldContext = match[2];
+      newVal = match[3];
+    } else {
+      const parts = desc.split('to');
+      if (parts.length === 2) {
+        oldVal = parts[0].replace(/.*from/i, '').trim();
+        newVal = parts[1].trim();
+      }
     }
-    if (type === 'workload_overload') {
-      return <Users className="w-4 h-4 text-rose-400" />;
-    }
-    return <GitBranch className="w-4 h-4 text-cyan-400" />;
+
+    return (
+      <div className="mt-3 p-3.5 bg-stone-50 border border-stone-200 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        {/* Before */}
+        <div className="space-y-0.5">
+          <span className="text-[10px] font-medium text-stone-500">Before</span>
+          <div className="font-semibold text-stone-700">
+            <RedPenStrike>{oldVal}</RedPenStrike>
+          </div>
+          <p className="text-[11px] text-stone-400">{oldContext}</p>
+        </div>
+
+        <ArrowRight className="w-4 h-4 text-stone-400 shrink-0 hidden sm:block" />
+
+        {/* After */}
+        <div className="space-y-0.5 sm:text-right">
+          <span className="text-[10px] font-medium text-emerald-700">After (Agreed)</span>
+          <div className="font-bold text-sm text-stone-900">{newVal}</div>
+          <p className="text-[11px] text-stone-500">
+            {c.meeting_title} ({c.meeting_date})
+          </p>
+        </div>
+      </div>
+    );
   };
 
-  const getResolutionBadge = (res) => {
-    if (res === 'kept_new') {
-      return (
-        <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1.5">
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          Kept New Decision
-        </span>
-      );
+  // --- Visual Treatment 2: Workload Overload (7-Day Strip) ---
+  const renderWorkloadStrip = (c) => {
+    // Extract dates and owner from description
+    const desc = c.description || '';
+    const dateMatch = desc.match(/between\s+([0-9-]+)\s+and\s+([0-9-]+)/i);
+    const startDateStr = dateMatch ? dateMatch[1] : '2026-12-24';
+
+    // Generate 7 consecutive days starting from startDate
+    const days = [];
+    const baseDate = new Date(startDateStr);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(baseDate);
+      d.setDate(baseDate.getDate() + i);
+      const isOverloadedDay = i >= 0 && i <= 3; // Dense commitment window
+      days.push({
+        label: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        dateStr: d.toISOString().split('T')[0].slice(5), // MM-DD
+        isOverloaded: isOverloadedDay,
+      });
     }
-    if (res === 'kept_old') {
-      return (
-        <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5" />
-          Kept Old Decision
-        </span>
-      );
-    }
-    if (res === 'acknowledged') {
-      return (
-        <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 flex items-center gap-1.5">
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          Acknowledged
-        </span>
-      );
-    }
+
     return (
-      <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-950 text-amber-300 border border-amber-800">
-        Pending Resolution
-      </span>
+      <div className="mt-3 p-3 bg-stone-50 border border-stone-200 rounded-lg space-y-2">
+        <div className="flex items-center justify-between text-xs text-stone-600">
+          <span className="font-medium text-stone-800">7-day capacity timeline</span>
+          <span className="text-[11px] text-amber-700 font-medium">Overload threshold: 4+ tasks / 7 days</span>
+        </div>
+
+        {/* 7 Day cells */}
+        <div className="grid grid-cols-7 gap-1.5 pt-1">
+          {days.map((day, idx) => (
+            <div
+              key={idx}
+              className={`p-2 rounded border text-center transition-all ${
+                day.isOverloaded
+                  ? 'bg-amber-50 border-amber-300 text-amber-950 font-semibold shadow-2xs'
+                  : 'bg-white border-stone-200 text-stone-500'
+              }`}
+            >
+              <div className="text-[10px] text-stone-400 font-normal">{day.label}</div>
+              <div className="text-xs mt-0.5">{day.dateStr}</div>
+              {day.isOverloaded && (
+                <div className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-600 mx-auto"></div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // --- Visual Treatment 3: Dependency Conflict (Two tasks on timeline) ---
+  const renderDependencyTimeline = (c) => {
+    const desc = c.description || '';
+    // E.g. "Karan's '...' is due 2026-12-22 but depends on Amit's '...' due 2026-12-28"
+    const dates = desc.match(/[0-9]{4}-[0-9]{2}-[0-9]{2}/g) || ['2026-12-22', '2026-12-28'];
+    const taskDate = dates[0] || '2026-12-22';
+    const depDate = dates[1] || '2026-12-28';
+
+    return (
+      <div className="mt-3 p-3.5 bg-stone-50 border border-stone-200 rounded-lg space-y-3">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-medium text-stone-800">Timeline sequence clash</span>
+          <span className="text-[11px] text-red-700 font-medium">
+            Prerequisite finishes after dependent task
+          </span>
+        </div>
+
+        {/* Horizontal Timeline Track */}
+        <div className="relative pt-3 pb-2">
+          <div className="h-1 bg-stone-200 rounded-full w-full"></div>
+          <div className="absolute top-2.5 left-1/4 right-1/4 h-1 bg-red-400 rounded-full"></div>
+
+          <div className="flex items-start justify-between pt-3">
+            {/* Downstream Task */}
+            <div className="space-y-0.5 max-w-[200px]">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-600"></span>
+                <span className="text-xs font-semibold text-stone-900">{taskDate}</span>
+              </div>
+              <p className="text-[11px] text-stone-600">Dependent task scheduled completion</p>
+            </div>
+
+            {/* Prerequisite Task */}
+            <div className="space-y-0.5 text-right max-w-[200px]">
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="text-xs font-semibold text-stone-900">{depDate}</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-stone-700"></span>
+              </div>
+              <p className="text-[11px] text-stone-600">Prerequisite deliverable due date</p>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   };
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-4 pb-4 border-b border-stone-200">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <AlertTriangle className="w-6 h-6 text-rose-400" />
+          <h2 className="text-xl font-bold tracking-tight text-stone-900 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-stone-700" />
             Detected Conflicts Log
           </h2>
-          <p className="text-sm text-slate-400">
-            Cross-meeting discrepancies detected and resolved during execution planning.
+          <p className="text-xs text-stone-500 mt-1">
+            Deterministic cross-meeting discrepancies detected across decision revisions, team capacity limits, and deliverable dependencies.
           </p>
         </div>
 
         {/* Search */}
-        <div className="relative w-full md:w-72">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+        <div className="relative w-full md:w-64">
+          <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Search conflict, topic, or meeting..."
+            placeholder="Search conflicts..."
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full bg-white border border-stone-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-400"
           />
         </div>
       </div>
 
+      {errorMsg && <ErrorAlert message={errorMsg} onRetry={fetchConflicts} />}
+
       {loading ? (
-        <div className="text-center py-16 text-slate-500 text-sm italic">
-          Loading conflicts log...
-        </div>
+        <LoadingSkeleton rows={4} />
       ) : conflicts.length === 0 ? (
-        <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800 p-8 space-y-3">
-          <Layers className="w-8 h-8 text-slate-600 mx-auto" />
-          <h3 className="text-base font-semibold text-slate-300">No conflicts recorded yet</h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
-            When you analyze meetings that alter previous decisions, overload team members, or violate task dependencies, conflicts will be detected and logged here upon confirmation.
-          </p>
-        </div>
+        <EmptyState
+          icon={Layers}
+          title="No conflicts detected"
+          description="When you analyze meetings that alter previous decisions, overload team members, or violate task dependencies, conflicts will be recorded here with resolutions."
+        />
       ) : filteredConflicts.length === 0 ? (
-        <div className="text-center py-12 text-slate-500 text-sm">
+        <div className="text-center py-12 text-stone-500 text-xs">
           No conflicts match your search filter "{searchFilter}".
         </div>
       ) : (
@@ -135,35 +245,39 @@ export default function ConflictsView() {
           {filteredConflicts.map((c) => (
             <div
               key={c.id}
-              className="bg-slate-900 border border-slate-800 hover:border-slate-700 p-5 rounded-2xl space-y-3.5 shadow-md transition-all"
+              className="bg-white border border-stone-200 rounded-xl p-5 shadow-2xs space-y-3"
             >
+              {/* Top row: Type indicator, Title, and Stamp Status */}
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs font-semibold">
-                    {getConflictIcon(c.type)}
-                    <span className="capitalize text-slate-300">
-                      {c.type.replace('_', ' ')}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-stone-100 text-stone-700 border border-stone-200 flex items-center gap-1.5">
+                      {c.type === 'decision_conflict' && <Shuffle className="w-3 h-3 text-stone-600" />}
+                      {c.type === 'workload_overload' && <Users className="w-3 h-3 text-stone-600" />}
+                      {c.type === 'dependency_conflict' && <GitBranch className="w-3 h-3 text-stone-600" />}
+                      <span>{c.type.replace('_', ' ')}</span>
                     </span>
+                    <h3 className="text-sm font-bold text-stone-900">{c.title}</h3>
                   </div>
-                  <h3 className="text-sm font-bold text-white tracking-tight">
-                    {c.title}
-                  </h3>
+                  <p className="text-xs text-stone-600 leading-relaxed font-sans">{c.description}</p>
                 </div>
 
-                <div>{getResolutionBadge(c.resolution)}</div>
+                <div className="shrink-0">
+                  <StampBadge status={c.resolution || 'unresolved'} />
+                </div>
               </div>
 
-              <p className="text-xs text-slate-300 leading-relaxed font-medium bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-                {c.description}
-              </p>
+              {/* Three Visual Treatments */}
+              {c.type === 'decision_conflict' && renderDecisionDiff(c)}
+              {c.type === 'workload_overload' && renderWorkloadStrip(c)}
+              {c.type === 'dependency_conflict' && renderDependencyTimeline(c)}
 
-              <div className="flex items-center gap-4 text-xs text-slate-500 pt-1 border-t border-slate-800/80">
-                <span className="flex items-center gap-1 text-indigo-400 font-medium">
-                  {c.meeting_title}
-                </span>
+              {/* Footer Audit Context */}
+              <div className="flex items-center gap-3 text-xs text-stone-400 pt-2 border-t border-stone-100 flex-wrap">
+                <span className="font-medium text-stone-700">{c.meeting_title}</span>
                 <span>•</span>
                 <span className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                  <Calendar className="w-3 h-3 text-stone-400" />
                   Meeting Date: {c.meeting_date}
                 </span>
                 <span>•</span>
