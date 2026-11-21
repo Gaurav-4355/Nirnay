@@ -16,6 +16,7 @@ import {
   GitBranch,
   ShieldAlert,
   Check,
+  Clock,
 } from 'lucide-react';
 import TranscriptHighlighter from './TranscriptHighlighter';
 
